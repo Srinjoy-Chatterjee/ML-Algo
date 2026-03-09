@@ -1,33 +1,38 @@
 # Algorithm
 K-Nearest Neighbors (KNN)
 
-K-Nearest Neighbors is a **non-parametric supervised learning algorithm** used for classification and regression.
+K-Nearest Neighbors is a **non-parametric supervised learning algorithm** used for both classification and regression tasks.
 
-The main idea is simple:
+Unlike many other algorithms, KNN **does not learn explicit model parameters during training**.  
+Instead, it stores the entire training dataset and makes predictions by comparing new samples with the stored data.
 
-A data point is classified based on the **labels of its nearest neighbors in the feature space**.
+The key idea is:
 
-For classification:
-The class with the **majority vote among the k nearest neighbors** is assigned.
+A sample is predicted based on the **labels of its closest neighbors in feature space**.
 
-For regression:
-The prediction is the **average value of the k nearest neighbors**.
+### Classification
+
+The predicted class is the **majority label among the k nearest neighbors**.
+
+### Regression
+
+The predicted value is the **average value of the k nearest neighbors**.
+
+KNN is called a **lazy learning algorithm** because computation happens mainly during prediction rather than training.
 
 ---
 
 # Model
 
-KNN does not learn explicit model parameters.
+KNN does not learn a mathematical model.
 
-Instead, the entire training dataset is stored.
+Instead, predictions are made based on **distance between points in feature space**.
 
-Prediction is based on **distance between points**.
-
-For two samples
+Given two samples
 
 x and z
 
-distance is typically computed using **Euclidean distance**
+the most common distance metric is **Euclidean distance**.
 
 d(x,z) = √ Σ (xᵢ − zᵢ)²
 
@@ -37,33 +42,64 @@ Where
 |------|------|
 | x | query sample |
 | z | training sample |
-| d(x,z) | distance between samples |
+| d(x,z) | distance between two samples |
+| xᵢ | feature i of sample x |
+
+The algorithm finds the **k closest training samples** to the query point.
 
 ---
 
-# Loss Function
+# Math Implementation
 
-KNN does not optimize a loss function during training.
+### Distance Computation
 
-Training simply stores the dataset.
+For a query sample x and training sample z
 
-The prediction rule minimizes **local distance in feature space**.
+d(x,z) = √ Σ (xᵢ − zᵢ)²
 
----
+Vector form
 
-# Gradient
+d(x,z) = √((x − z)ᵀ(x − z))
 
-KNN is a **lazy learning algorithm** and does not use gradient descent.
-
-No parameters are optimized.
+This distance measures similarity in the feature space.
 
 ---
 
-# Gradient Descent Update
+### Classification Rule
 
-Not applicable.
+Let
 
-No parameter updates occur during training.
+Nₖ(x) be the set of k nearest neighbors of sample x.
+
+Prediction
+
+ŷ = argmax Σ I(yᵢ = c)
+
+Where
+
+| Symbol | Meaning |
+|------|------|
+| I | indicator function |
+| c | class label |
+| yᵢ | label of neighbor |
+
+The class with the **largest count among neighbors** is selected.
+
+---
+
+### Regression Rule
+
+Prediction
+
+ŷ = (1/k) Σ yᵢ
+
+Where
+
+| Symbol | Meaning |
+|------|------|
+| yᵢ | neighbor values |
+
+The predicted value is the **average of neighbor values**.
 
 ---
 
@@ -75,97 +111,160 @@ No parameter updates occur during training.
 |------|------|
 | k | number of nearest neighbors |
 
+---
+
+### Stored During Training
+
+| Variable | Meaning |
+|------|------|
+| X_train | training feature matrix |
+| y_train | training labels |
+
+---
+
 ### Derived During Prediction
 
 | Variable | Meaning |
 |------|------|
-| distances | distance between query and training points |
-| nearest_neighbors | indices of k closest points |
-| nearest_labels | labels of nearest neighbors |
+| distances | distance matrix between test and training samples |
+| nearest_neighbors | indices of k closest training samples |
+| nearest_labels | labels of the nearest neighbors |
 
 ---
 
-# Vectorized Form
+# Loop / Vectorized Form
 
-Distances are computed in a fully vectorized way.
-
-Distance matrix
+Distance matrix computation uses **NumPy broadcasting**.
 
 ```
 distances = np.linalg.norm(self.X_train[None,:,:] - X[:,None,:], axis=2)
 ```
 
-Shape
+Shapes involved
+
+```
+X_train shape → (n_train , d)
+X shape       → (n_test , d)
+```
+
+After broadcasting
+
+```
+X[:,None,:]           → (n_test , 1 , d)
+self.X_train[None,:,:] → (1 , n_train , d)
+```
+
+Subtraction result
+
+```
+(n_test , n_train , d)
+```
+
+Then Euclidean norm across feature dimension
+
+```
+axis = 2
+```
+
+Final distance matrix shape
 
 ```
 (n_test , n_train)
 ```
 
-Each row contains distances from a test sample to all training samples.
+Each row contains distances from **one test sample to all training samples**.
 
 ---
 
 # Algorithm Steps
 
-Training
+### Training
 
-1 Store training data  
-2 Store labels  
+1 Store training feature matrix
 
-Prediction
+X_train = X
 
-1 Compute distance between test samples and training samples  
-2 Select k smallest distances  
-3 Retrieve labels of nearest neighbors  
-4 Choose the most frequent label  
+2 Store training labels
+
+y_train = y
+
+No parameter learning occurs.
+
+---
+
+### Prediction
+
+1 Compute distance between test samples and training samples
+
+D[i,j] = distance(test_i , train_j)
+
+2 Sort distances
+
+3 Select indices of the **k smallest distances**
+
+4 Retrieve labels of those neighbors
+
+5 Compute majority vote
+
+Predicted class = most frequent label
 
 ---
 
 # Time Complexity
 
-Training
+### Training Complexity
 
 O(1)
 
-Prediction
-
-O(n_train × d)
-
-Where
-
-| Symbol | Meaning |
-|------|------|
-| n_train | number of training samples |
-| d | number of features |
-
-Sorting neighbors adds
-
-O(n_train log n_train)
+Training only stores the dataset.
 
 ---
 
-# Implementation
+### Prediction Complexity
+
+Distance computation
+
+O(n_test × n_train × d)
+
+Sorting neighbors
+
+O(n_train log n_train)
+
+Total prediction complexity
+
+O(n_train × d)
+
+for each test sample.
+
+---
+
+# Code Implementation
 
 ```python
 class KNN:
     def __init__(self,k=3):
-        self.k = k
+        self.k = k                     # number of nearest neighbors
 
     def fit(self,X,y):
-        self.X_train = X
-        self.y_train = y
+        self.X_train = X               # store training features
+        self.y_train = y               # store training labels
 
     def predict(self,X):
 
+        # compute pairwise Euclidean distances between
+        # test samples and training samples
         distances = np.linalg.norm(
             self.X_train[None,:,:] - X[:,None,:],
             axis=2
         )
 
+        # find indices of k nearest neighbors
         nearest_neighbors = np.argsort(distances,axis=1)[:,:self.k]
 
+        # retrieve labels of nearest neighbors
         nearest_labels = self.y_train[nearest_neighbors]
 
+        # majority voting for classification
         return np.array([
             np.bincount(labels).argmax()
             for labels in nearest_labels

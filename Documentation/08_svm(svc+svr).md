@@ -1,26 +1,31 @@
 # Algorithm
 Support Vector Machines (SVC, Kernel SVC, Kernel SVR)
 
-Support Vector Machines are supervised learning algorithms used for **classification and regression**.
+Support Vector Machines (SVM) are supervised learning algorithms used for **classification and regression**.
 
-The main idea is to find a **hyperplane that maximizes the margin between classes**.
+The key idea of SVM is to find a **hyperplane that separates classes with the maximum margin**.
 
-Margin = distance between the separating hyperplane and the nearest training points.
+Margin = distance between the separating hyperplane and the closest training points.
 
-Those nearest points are called **support vectors**.
+The training samples that lie closest to the hyperplane are called **support vectors**, and they determine the final model.
 
-Two main variants:
+SVM can solve **linear and non-linear problems**.
 
-SVC → classification  
-SVR → regression
+Linear SVM → uses linear hyperplane  
+Kernel SVM → uses kernel functions to map data into higher-dimensional space
 
-Kernel methods allow SVM to solve **non-linear problems**.
+Two variants implemented here:
+
+• **SVC** → classification  
+• **SVR** → regression using epsilon-insensitive loss  
 
 ---
 
 # Model
 
-For classification the model is
+## Linear SVM
+
+The decision function is
 
 f(x) = wᵀx + b
 
@@ -36,7 +41,11 @@ Where
 | b | bias |
 | x | feature vector |
 
-In the **dual formulation**
+---
+
+## Dual Representation
+
+Instead of directly solving for **w**, SVM solves a **dual optimization problem**.
 
 w = Σ αᵢ yᵢ xᵢ
 
@@ -44,29 +53,47 @@ Where
 
 | Symbol | Meaning |
 |------|------|
-| α | Lagrange multipliers |
+| αᵢ | Lagrange multiplier |
 | yᵢ | class label |
-| xᵢ | support vectors |
+| xᵢ | training sample |
 
-For kernel SVM
+Only samples with **αᵢ > 0** contribute to the solution → these are the **support vectors**.
+
+---
+
+## Kernel SVM
+
+Kernel functions allow SVM to learn **non-linear decision boundaries**.
+
+Decision function
 
 f(x) = Σ αᵢ yᵢ K(xᵢ , x) + b
 
 Where
 
-K(xᵢ , x) is the kernel function.
+| Symbol | Meaning |
+|------|------|
+| K(xᵢ , x) | kernel function |
+
+Common kernels
+
+• Linear  
+• Polynomial  
+• RBF (Gaussian)  
 
 ---
 
-# Loss Function
+# Math Implementation
 
-The optimization objective of SVM is
+## Primal Optimization Problem
+
+SVM solves
 
 min (1/2) ||w||² + C Σ ξᵢ
 
-Subject to
+subject to
 
-yᵢ(w·xᵢ + b) ≥ 1 − ξᵢ
+yᵢ (w·xᵢ + b) ≥ 1 − ξᵢ
 
 Where
 
@@ -75,43 +102,88 @@ Where
 | ξᵢ | slack variable |
 | C | regularization parameter |
 
-Dual objective maximized in implementation
-
-max Σ αᵢ − (1/2) Σ αᵢ αⱼ yᵢ yⱼ xᵢ·xⱼ
+The first term maximizes the **margin**, while the second penalizes classification errors.
 
 ---
 
-# Gradient
+## Dual Optimization Problem
 
-For the dual objective
+The dual objective is
 
-gradient = 1 − Qα
+max Σ αᵢ − (1/2) Σ Σ αᵢ αⱼ yᵢ yⱼ xᵢ·xⱼ
 
-Where
+subject to
 
-Q = yᵢ yⱼ xᵢ·xⱼ
+0 ≤ αᵢ ≤ C  
+Σ αᵢ yᵢ = 0
 
-In matrix form
+---
+
+## Dual Matrix Form
+
+Define
 
 Q = (y yᵀ) ⊙ (X Xᵀ)
 
 Where
 
-⊙ denotes element-wise multiplication.
+| Symbol | Meaning |
+|------|------|
+| ⊙ | element-wise multiplication |
+
+The dual objective becomes
+
+max 1ᵀα − (1/2) αᵀ Q α
 
 ---
 
-# Gradient Descent Update
+## Gradient of Dual Objective
 
-The dual parameters α are updated using gradient ascent.
+∇L = 1 − Qα
+
+This gradient is used in **gradient ascent**.
+
+---
+
+## Gradient Ascent Update
 
 α = α + η (1 − Qα)
 
-Constraints must also be enforced
+---
+
+## Constraint Enforcement
+
+After updating α, two constraints must be satisfied.
+
+### Box Constraint
 
 0 ≤ α ≤ C
 
+Implemented with
+
+```
+clip(alpha, 0, C)
+```
+
+---
+
+### Equality Constraint
+
 yᵀα = 0
+
+To enforce this constraint the projection step is used
+
+α ← α − proj_y(α)
+
+Projection formula
+
+proj_y(α) = (yᵀα / yᵀy) y
+
+Thus
+
+α = α − (yᵀα)/(yᵀy) y
+
+This removes the component of α parallel to y.
 
 ---
 
@@ -121,27 +193,31 @@ yᵀα = 0
 
 | Variable | Meaning |
 |------|------|
-| epoch | number of iterations |
+| epoch | number of training iterations |
 | lr | learning rate |
-| C | regularization strength |
+| C | regularization parameter |
 | epsilon | SVR margin width |
 | Kernel | kernel function |
 
-### Derived
+---
+
+### Derived During Training
 
 | Variable | Meaning |
 |------|------|
 | alpha | Lagrange multipliers |
+| alpha_star | dual variables in SVR |
 | Q | dual matrix |
 | w | weight vector |
 | b | bias |
 | support | support vector indices |
+| beta | α − α* (SVR dual variable) |
 
 ---
 
-# Vectorized Form
+# Loop / Vectorized Form
 
-Dual matrix
+Dual matrix computation
 
 ```
 Y = y @ y.T
@@ -155,15 +231,16 @@ Gradient
 gradient = ones - Q @ alpha
 ```
 
-Parameter update
+Gradient ascent update
 
 ```
 alpha = alpha + lr * gradient
 ```
 
-Projection constraint
+Constraint enforcement
 
 ```
+alpha = clip(alpha,0,C)
 alpha = alpha - (y.T @ alpha)/(y.T @ y) * y
 ```
 
@@ -171,19 +248,86 @@ alpha = alpha - (y.T @ alpha)/(y.T @ y) * y
 
 # Algorithm Steps
 
-Training
+## SVC Training
 
 1 Initialize α = 0  
-2 Compute Q matrix  
-3 Perform gradient ascent updates  
-4 Enforce constraints on α  
-5 Compute weight vector  
-6 Compute bias from support vectors  
+
+2 Compute dual matrix  
+
+Q = (y yᵀ) ⊙ (X Xᵀ)
+
+3 Repeat for each iteration
+
+Compute gradient
+
+gradient = 1 − Qα
+
+Update α
+
+α = α + η gradient
+
+Clip α to satisfy
+
+0 ≤ α ≤ C
+
+Project α to satisfy
+
+yᵀα = 0
+
+4 Compute weight vector
+
+w = Xᵀ(α ⊙ y)
+
+5 Identify support vectors
+
+αᵢ > 0
+
+6 Compute bias
+
+b = mean(yᵢ − wᵀxᵢ)
+
+---
+
+## Kernel SVC Training
+
+Same procedure as SVC, but replace
+
+X Xᵀ
+
+with kernel matrix
+
+K(X,X)
+
+Prediction uses
+
+f(x) = Σ αᵢ yᵢ K(xᵢ , x) + b
+
+---
+
+## SVR Training
+
+SVR uses **epsilon-insensitive loss**.
+
+Errors smaller than ε are ignored
+
+|y − f(x)| ≤ ε
+
+Two dual variables are introduced
+
+α and α*
+
+Define
+
+β = α − α*
 
 Prediction
 
-1 Compute decision function  
-2 Apply sign function for classification  
+f(x) = Σ βᵢ K(xᵢ , x) + b
+
+The algorithm updates α and α* with gradient ascent while enforcing
+
+0 ≤ α, α* ≤ C  
+Σ (α − α*) = 0
 
 ---
 
@@ -191,13 +335,13 @@ Prediction
 
 Kernel matrix computation
 
-O(n²d)
+O(n² d)
 
-Training
+Training complexity
 
 O(epoch × n²)
 
-Prediction
+Prediction complexity
 
 O(n_support × d)
 
@@ -210,49 +354,53 @@ Where
 
 ---
 
-# Implementation
+# Code Implementation
 
 ## Linear SVC
 
 ```python
 class SVC:
     def __init__(self, epoch=1000, lr=0.01,C=100):
-        self.epoch = epoch
-        self.lr = lr
-        self.C = C
+        self.epoch = epoch        # number of optimization iterations
+        self.lr = lr              # learning rate
+        self.C = C                # regularization parameter
         
     def fit(self, X, y):
 
         n = X.shape[0]
-        y = y.reshape((-1,1))
+        y = y.reshape((-1,1))     # convert labels to column vector
         
-        self.alpha = np.zeros((n,1))
+        self.alpha = np.zeros((n,1))   # initialize Lagrange multipliers
         
-        Y = y @ y.T
-        K = X @ X.T
-        Q = Y * K
+        Y = y @ y.T               # label outer product
+        K = X @ X.T               # kernel matrix for linear kernel
+        Q = Y * K                 # dual matrix
         
         ones = np.ones((n,1))
         
         for _ in range(self.epoch):
 
-            gradient = ones - Q @ self.alpha
+            gradient = ones - Q @ self.alpha   # gradient of dual objective
 
-            self.alpha = self.alpha + self.lr * gradient
+            self.alpha = self.alpha + self.lr * gradient   # gradient ascent step
 
-            self.alpha = np.clip(self.alpha,0,self.C)
+            self.alpha = np.clip(self.alpha,0,self.C)      # enforce 0 ≤ α ≤ C
 
+            # enforce constraint y^T α = 0
             self.alpha = self.alpha - (y.T @ self.alpha)/(y.T @ y) * y
 
+        # compute weight vector
         self.w = X.T @ (self.alpha * y)
 
+        # identify support vectors
         support = (self.alpha.flatten() > 1e-5)
 
+        # compute bias
         self.b = np.mean(y[support] - X[support] @ self.w)
 
     def predict(self, X):
 
-        return np.sign(X @ self.w + self.b)
+        return np.sign(X @ self.w + self.b)   # classification prediction
 ```
 
 ---
@@ -270,7 +418,7 @@ class KernelSVC:
         
     def fit(self, X, y):
 
-        self.X_train = X
+        self.X_train = X        # store training data
         y = y.reshape((-1,1))
         self.y_train = y
 
@@ -279,7 +427,7 @@ class KernelSVC:
         self.alpha = np.zeros((n,1))
 
         Y = y @ y.T
-        K = self.Kernel(X,X,**self.kwargs)
+        K = self.Kernel(X,X,**self.kwargs)   # kernel matrix
         Q = Y * K
 
         ones = np.ones((n,1))
@@ -294,8 +442,10 @@ class KernelSVC:
 
             self.alpha = self.alpha - (y.T @ self.alpha)/(y.T @ y) * y
 
+        # identify support vectors
         support = (self.alpha.flatten() > 1e-5) & (self.alpha.flatten() < self.C - 1e-5)
 
+        # compute bias using support vectors
         self.b = np.mean(y[support] - (K @ (self.alpha * y))[support])
 
     def predict(self, X):
@@ -308,14 +458,6 @@ class KernelSVC:
 ---
 
 ## Kernel SVR
-
-SVR predicts continuous values using an **epsilon-insensitive loss**.
-
-Only errors larger than ε contribute to the loss.
-
-```
-|y - f(x)| ≤ ε
-```
 
 ```python
 class KernelSVR:
@@ -345,37 +487,35 @@ class KernelSVR:
         
         for _ in range(self.epoch):
             
-            beta = self.alpha - self.alpha_star   # (n,1)
-            f = K @ beta                          # (n,1)
+            beta = self.alpha - self.alpha_star   # dual variable
+            f = K @ beta                          # prediction
             
-            # Gradients from SVR dual
+            # gradients of SVR dual objective
             grad_alpha = y - f - self.epsilon
             grad_alpha_star = -y + f - self.epsilon
             
-            # Gradient ascent
+            # gradient ascent updates
             self.alpha += self.lr * grad_alpha
             self.alpha_star += self.lr * grad_alpha_star
             
-            # Box constraints
+            # enforce box constraints
             self.alpha = np.clip(self.alpha, 0, self.C)
             self.alpha_star = np.clip(self.alpha_star, 0, self.C)
             
-            # Enforce equality constraint: sum(alpha - alpha*) = 0
+            # enforce equality constraint
             beta = self.alpha - self.alpha_star
             correction = np.sum(beta) / n
             
             self.alpha -= correction / 2
             self.alpha_star += correction / 2
             
-            # Clip again
             self.alpha = np.clip(self.alpha, 0, self.C)
             self.alpha_star = np.clip(self.alpha_star, 0, self.C)
         
-        # Final beta
+        # compute final beta
         self.beta = self.alpha - self.alpha_star
         
-        # -------- Compute bias b --------
-        
+        # compute bias
         f_train = K @ self.beta
         
         idx1 = np.where((self.alpha > 1e-5) & 
@@ -397,6 +537,4 @@ class KernelSVR:
     def predict(self, X):
         K = self.Kernel(self.X_train, X, **self.kwargs)
         return (K.T @ self.beta + self.b)
- 
 ```
-

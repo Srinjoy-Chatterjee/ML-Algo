@@ -1,20 +1,27 @@
 # Algorithm
 Linear Regression
 
-Linear Regression is a supervised learning algorithm used to predict a **continuous target variable** from input features.  
-It assumes a **linear relationship** between features and the target.
+Linear Regression is a supervised learning algorithm used to predict a **continuous target variable** from input features.
 
-Example
+It assumes that the relationship between the input features and the target variable is **linear**.
 
-y = w1x1 + w2x2 + ... + wdxd + b
+Example linear relationship
 
-The algorithm learns parameters that minimize prediction error.
+y = w₁x₁ + w₂x₂ + ... + w_d x_d + b
+
+The goal of the algorithm is to learn the parameters (weights and bias) that minimize the prediction error between the predicted value and the true value.
+
+Linear Regression is commonly used in:
+
+• house price prediction  
+• sales forecasting  
+• trend estimation  
 
 ---
 
 # Model
 
-The linear model is
+The linear regression model can be written as
 
 ŷ = Xθ
 
@@ -23,13 +30,28 @@ Where
 | Symbol | Meaning |
 |------|------|
 | X | feature matrix (n × d) |
-| θ | parameter vector |
-| ŷ | predicted values |
-| y | true target |
+| θ | parameter vector (d × 1) |
+| ŷ | predicted output |
+| y | true output |
 | n | number of samples |
 | d | number of features |
 
-Bias is handled by adding a column of ones.
+Expanded form
+
+ŷ = w₁x₁ + w₂x₂ + ... + w_d x_d + b
+
+Where
+
+| Symbol | Meaning |
+|------|------|
+| w | feature weights |
+| b | bias |
+
+### Bias Handling
+
+Instead of treating bias separately, it is included inside the parameter vector.
+
+Add a column of ones to X:
 
 X' = [X 1]
 
@@ -37,15 +59,29 @@ Then
 
 ŷ = X'θ
 
+Where
+
+θ = [w₁, w₂, ... , w_d , b]
+
+This allows the model to be written using a single matrix multiplication.
+
 ---
 
-# Loss Function
+# Math Implementation
+
+### Loss Function
 
 Linear regression minimizes **Mean Squared Error (MSE)**.
 
 L(θ) = (1/n) Σ (ŷ − y)²
 
-This measures the average squared difference between predictions and true values.
+Where
+
+| Symbol | Meaning |
+|------|------|
+| L(θ) | loss function |
+| ŷ | predicted value |
+| y | true value |
 
 Vector form
 
@@ -53,25 +89,32 @@ L(θ) = (1/n)(Xθ − y)ᵀ(Xθ − y)
 
 ---
 
-# Gradient
+### Gradient
 
 Let
 
 e = Xθ − y
 
-Then the gradient of the loss with respect to θ is
+Then
 
-∇L = (2/n) Xᵀ(Xθ − y)
+∇L(θ) = (2/n) Xᵀ(Xθ − y)
 
-This gradient tells how parameters should change to reduce error.
+Where
+
+| Symbol | Meaning |
+|------|------|
+| ∇L | gradient of loss |
+| Xᵀ | transpose of X |
+
+This gradient indicates how the parameters should change to minimize the loss.
 
 ---
 
-# Gradient Descent Update
+### Gradient Descent Update
 
-Parameters are updated iteratively.
+Parameters are updated iteratively using gradient descent.
 
-θ = θ − η ∇L
+θ = θ − η ∇L(θ)
 
 Substituting the gradient
 
@@ -82,6 +125,8 @@ Where
 | Symbol | Meaning |
 |------|------|
 | η | learning rate |
+
+Learning rate controls how large each parameter update step is.
 
 ---
 
@@ -98,14 +143,16 @@ Where
 
 | Variable | Meaning |
 |------|------|
-| m | parameter vector |
+| m | parameter vector θ |
 | prediction | predicted values |
 | error | difference between prediction and true value |
-| gradient | derivative of loss |
+| gradient | derivative of loss function |
 
 ---
 
-# Vectorized Form
+# Loop / Vectorized Form
+
+The implementation uses **vectorized matrix operations** instead of loops over samples.
 
 Prediction
 
@@ -125,66 +172,96 @@ Gradient
 gradient = (2/n) * (X.T @ error)
 ```
 
-Vectorization removes loops and allows fast matrix operations.
+Vectorization allows the computation to be done efficiently using linear algebra operations.
 
 ---
 
 # Algorithm Steps
 
-1 Add bias column to feature matrix  
-2 Initialize parameters θ = 0  
+1. Add bias column to feature matrix  
 
-Repeat for each epoch
+X ← [X 1]
 
-prediction = Xθ  
-error = prediction − y  
-gradient = (2/n) Xᵀ error  
-θ = θ − lr × gradient  
+2. Initialize parameter vector
+
+θ = 0
+
+3. Repeat for each iteration
+
+Compute prediction
+
+ŷ = Xθ
+
+Compute error
+
+e = ŷ − y
+
+Compute gradient
+
+∇L = (2/n) Xᵀ e
+
+Update parameters
+
+θ = θ − η ∇L
+
+4. Stop after the specified number of epochs.
 
 ---
 
 # Time Complexity
 
-The main cost is matrix multiplication.
+Training complexity
 
 O(n × d)
 
 Where
 
-n = number of samples  
-d = number of features
+| Symbol | Meaning |
+|------|------|
+| n | number of samples |
+| d | number of features |
+
+Prediction complexity
+
+O(n × d)
+
+The main cost comes from matrix multiplication.
 
 ---
 
-# Implementation
+# Code Implementation
 
 ```python
 class LinearRegression:
 
     def __init__(self,lr = 0.01, epoch = 1000):
-            self.lr = lr
-            self.epoch = epoch
+            self.lr = lr              # learning rate for gradient descent
+            self.epoch = epoch        # number of training iterations
 
     def fit(self,X,y):
-        n = X.shape[0]
+        n = X.shape[0]               # number of samples
 
-        ones = np.ones((n,1))
-        X = np.hstack((X,ones))
+        ones = np.ones((n,1))        # create bias column
+        X = np.hstack((X,ones))      # add bias to feature matrix
 
-        self.m = np.zeros((X.shape[1],1))
+        self.m = np.zeros((X.shape[1],1))   # initialize parameter vector θ
 
-        y = y.reshape((-1,1))
+        y = y.reshape((-1,1))        # reshape target to column vector
 
         for _ in range(self.epoch):
-            prediction = X @ self.m
-            error = prediction -y
-            gradiant = (2/n) * (X.T @ error)
-            self.m = self.m - self.lr * gradiant
+
+            prediction = X @ self.m        # compute predictions (Xθ)
+
+            error = prediction - y         # compute residual error
+
+            gradiant = (2/n) * (X.T @ error)   # compute gradient of MSE
+
+            self.m = self.m - self.lr * gradiant   # update parameters using gradient descent
         
     def predict(self,X):
 
-        ones = np.ones((X.shape[0],1))
+        ones = np.ones((X.shape[0],1))     # add bias column for prediction
         X = np.hstack((X,ones))
 
-        return X @ self.m
+        return X @ self.m                  # return predicted values
 ```

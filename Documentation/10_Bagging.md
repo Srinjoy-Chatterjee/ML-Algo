@@ -1,35 +1,40 @@
 # Algorithm
 Bagging (Bootstrap Aggregating)
 
-Bagging is an ensemble learning technique used to improve model stability and reduce variance.
+Bagging is an ensemble learning technique designed to **reduce variance and improve model stability**.
 
-The main idea is to train multiple models on different **bootstrap samples** of the dataset and then combine their predictions.
+The key idea is to train multiple models on different **bootstrap samples** of the training dataset and combine their predictions.
 
-Bootstrap sampling means sampling the training data **with replacement**.
+Bootstrap sampling means sampling the training dataset **with replacement**.  
+As a result, each model is trained on a slightly different dataset.
 
-Each model sees a slightly different dataset, which reduces overfitting when predictions are aggregated.
+This diversity between models helps reduce **overfitting**, especially for high-variance models such as **decision trees**.
 
-Bagging is commonly used with high variance models such as decision trees.
+Bagging works well when:
+
+• base models have high variance  
+• datasets contain noise  
+• model stability is required  
 
 ---
 
 # Model
 
-Bagging does not define a new prediction function.
+Bagging does not define a new prediction model.
 
-Instead it combines predictions from multiple models.
+Instead it combines predictions from **multiple base models**.
 
-If there are **M models**
+Assume there are **M models**:
 
-Prediction is
+h₁(x), h₂(x), … , hₘ(x)
 
-Classification
+---
 
-ŷ = mode(h₁(x), h₂(x), … , hₘ(x))
+## Classification Prediction
 
-Regression
+The final prediction is the **majority vote**.
 
-ŷ = (1/M) Σ hᵢ(x)
+ŷ = mode(h₁(x), h₂(x), … , hₘ(x))
 
 Where
 
@@ -40,29 +45,69 @@ Where
 
 ---
 
-# Loss Function
+## Regression Prediction
 
-Bagging does not introduce a new loss function.
+For regression the predictions are averaged.
 
-Each individual model optimizes its own loss function.
+ŷ = (1/M) Σ hᵢ(x)
 
-The ensemble prediction reduces variance by averaging multiple models.
+Where
 
----
+| Symbol | Meaning |
+|------|------|
+| hᵢ(x) | prediction of model i |
 
-# Gradient
-
-Bagging does not use gradient descent.
-
-It works by **resampling the dataset and training independent models**.
+Averaging reduces variance in the predictions.
 
 ---
 
-# Gradient Descent Update
+# Math Implementation
 
-Not applicable.
+## Bootstrap Sampling
 
-Bagging is an ensemble strategy rather than an optimization algorithm.
+Bootstrap sampling creates multiple training datasets.
+
+Given dataset
+
+D = {x₁, x₂, … , xₙ}
+
+A bootstrap sample is created by randomly selecting **n samples with replacement**.
+
+Example
+
+D₁ = sample(D)  
+D₂ = sample(D)  
+...  
+Dₘ = sample(D)
+
+Each dataset may contain **duplicate samples**.
+
+---
+
+## Ensemble Prediction
+
+After training models
+
+h₁, h₂, … , hₘ
+
+Predictions are combined.
+
+Classification
+
+ŷ = argmax_c Σ I(hᵢ(x) = c)
+
+Where
+
+| Symbol | Meaning |
+|------|------|
+| I | indicator function |
+| c | class label |
+
+---
+
+Regression
+
+ŷ = (1/M) Σ hᵢ(x)
 
 ---
 
@@ -72,20 +117,32 @@ Bagging is an ensemble strategy rather than an optimization algorithm.
 
 | Variable | Meaning |
 |------|------|
-| model | base learning model |
-| n_estimators | number of models in the ensemble |
+| model | base learning algorithm |
+| n_estimators | number of models in ensemble |
 
-### Derived
+---
+
+### Derived During Training
 
 | Variable | Meaning |
 |------|------|
 | models | list of trained models |
 | indx | bootstrap sample indices |
-| y_pred | predictions from all models |
+| new_X | sampled training features |
+| new_Y | sampled training targets |
 
 ---
 
-# Vectorized Form
+### Derived During Prediction
+
+| Variable | Meaning |
+|------|------|
+| y_pred | predictions from each model |
+| final | aggregated predictions |
+
+---
+
+# Loop / Vectorized Form
 
 Bootstrap sampling
 
@@ -93,48 +150,86 @@ Bootstrap sampling
 indices = np.random.choice(n, n, replace=True)
 ```
 
+This creates a new dataset by sampling indices from the original dataset.
+
+---
+
 Prediction aggregation
 
 Classification
 
 ```
-mode(predictions)
+np.bincount(labels).argmax()
 ```
+
+This computes the **majority vote**.
 
 Regression
 
 ```
-mean(predictions)
+np.mean(predictions)
 ```
+
+This computes the **average prediction** across models.
 
 ---
 
 # Algorithm Steps
 
-Training
+## Training
 
-1 Repeat n_estimators times  
-2 Sample training data with replacement  
-3 Train a base model on the sampled dataset  
-4 Store the trained model  
+1 Initialize empty list of models.
 
-Prediction
+2 Repeat **n_estimators times**
 
-1 Collect predictions from all models  
-2 Combine predictions  
+Create bootstrap sample
 
-Classification → majority vote  
-Regression → average prediction
+Sample n indices with replacement.
+
+Create new dataset
+
+new_X = X[indx]  
+new_Y = y[indx]
+
+3 Clone the base model.
+
+4 Train model on the bootstrap dataset.
+
+5 Store the trained model.
+
+---
+
+## Prediction
+
+1 Collect predictions from all models.
+
+2 Combine predictions
+
+Classification
+
+Use majority vote.
+
+Regression
+
+Use mean prediction.
 
 ---
 
 # Time Complexity
 
-Training
+Training complexity
 
 O(n_estimators × training_cost)
 
-Prediction
+Where
+
+| Symbol | Meaning |
+|------|------|
+| training_cost | training cost of base model |
+
+---
+
+Prediction complexity
 
 O(n_estimators × prediction_cost)
 
@@ -142,43 +237,51 @@ Where
 
 | Symbol | Meaning |
 |------|------|
-| n_estimators | number of models |
-| training_cost | cost of training base model |
+| prediction_cost | prediction cost of base model |
 
 ---
 
-# Implementation
+# Code Implementation
 
 ## Bagging for Classification
 
 ```python
 class Bagging:
     def __init__(self,model,n_estimators):
-        self.model = model
-        self.n_estimators = n_estimators
-        self.models = []
+        self.model = model               # base learning model
+        self.n_estimators = n_estimators # number of models in ensemble
+        self.models = []                 # list to store trained models
 
     def fit(self,X,y):
+
         n = X.shape[0]
+
         for _ in range(self.n_estimators):
 
+            # generate bootstrap sample indices
             indx = np.random.choice(n,n,replace=True)
 
+            # create sampled dataset
             new_X = X[indx]
             new_Y = y[indx]
 
+            # clone base model
             model = deepcopy(self.model)
 
+            # train model
             model.fit(new_X,new_Y)
 
+            # store trained model
             self.models.append(model)
 
     def predict(self,X):
 
+        # collect predictions from all models
         y_pred = np.array([model.predict(X) for model in self.models])
 
         final = []
 
+        # majority voting
         for column in y_pred.T:
 
             final.append(np.bincount(column.astype(int)).argmax())
@@ -190,14 +293,14 @@ class Bagging:
 
 ## Bagging for Regression
 
-Regression combines predictions by averaging.
+Regression combines predictions using averaging.
 
 ```python
 class Bagging:
     def __init__(self,model,n_estimators):
-        self.model = model
-        self.n_estimators = n_estimators
-        self.models = []
+        self.model = model               # base regression model
+        self.n_estimators = n_estimators # number of estimators
+        self.models = []                 # list of trained models
 
     def fit(self,X,y):
 
@@ -205,21 +308,26 @@ class Bagging:
 
         for _ in range(self.n_estimators):
 
+            # bootstrap sampling
             indx = np.random.choice(n,n,replace=True)
 
             new_X = X[indx]
 
             new_Y = y[indx]
 
+            # clone base model
             model = deepcopy(self.model)
 
+            # train model
             model.fit(new_X,new_Y)
 
             self.models.append(model)
 
     def predict(self,X):
 
+        # collect predictions from all models
         y_pred = np.array([model.predict(X) for model in self.models])
 
+        # average predictions
         return np.mean(y_pred,axis=0)
 ```

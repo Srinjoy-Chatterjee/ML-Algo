@@ -1,15 +1,18 @@
 # Algorithm
 AdaBoost (Adaptive Boosting)
 
-AdaBoost is an ensemble learning algorithm that combines multiple **weak learners** to create a strong model.
+AdaBoost is an ensemble learning algorithm that combines multiple **weak learners** to produce a strong predictive model.
 
-The key idea is:
+The core idea of AdaBoost is **sequential learning with adaptive sample weights**.
 
-• Train models sequentially  
-• Increase the importance of misclassified samples  
-• Combine models using weighted voting  
+Instead of training models independently, AdaBoost trains them **one after another**.
 
-Each new model focuses more on the samples that previous models predicted incorrectly.
+After each model:
+
+• Misclassified samples receive **higher weights**  
+• Correctly classified samples receive **lower weights**
+
+This forces the next weak learner to focus more on difficult samples.
 
 In this implementation the weak learner is a **decision stump** (a decision tree with depth 1).
 
@@ -22,13 +25,37 @@ AdaBoost Regression
 
 # Model
 
-The final prediction is a weighted combination of weak learners.
+The final model is a **weighted combination of weak learners**.
 
-Classification
+Assume there are **T weak learners**
+
+h₁(x), h₂(x), … , hₜ(x)
+
+Each learner receives a weight **αₜ** based on its performance.
+
+---
+
+## Classification Prediction
+
+Final classifier
 
 f(x) = sign( Σ αₜ hₜ(x) )
 
-Regression
+Where
+
+| Symbol | Meaning |
+|------|------|
+| hₜ(x) | prediction of weak learner t |
+| αₜ | weight of weak learner |
+| T | number of weak learners |
+
+Learners with **lower error receive higher weights**.
+
+---
+
+## Regression Prediction
+
+Regression uses a weighted average.
 
 f(x) = ( Σ αₜ hₜ(x) ) / ( Σ αₜ )
 
@@ -36,41 +63,66 @@ Where
 
 | Symbol | Meaning |
 |------|------|
-| hₜ(x) | prediction from weak learner t |
-| αₜ | weight of learner t |
-| T | number of learners |
-
-Weak learners with lower error receive higher weights.
+| αₜ | learner weight |
 
 ---
 
-# Loss Function
+# Math Implementation
 
-AdaBoost minimizes **exponential loss**.
+## Initialization
 
-Classification loss
+Each training sample starts with equal weight.
 
-L = Σ exp(−y f(x))
+wᵢ = 1 / n
 
-This loss increases rapidly when predictions are incorrect, forcing the next learner to focus on difficult samples.
+Where
 
----
-
-# Gradient
-
-AdaBoost does not explicitly compute gradients.
-
-Instead it performs **multiplicative weight updates** on training samples.
-
-Samples that are misclassified receive larger weights.
+| Symbol | Meaning |
+|------|------|
+| wᵢ | weight of sample i |
+| n | number of samples |
 
 ---
 
-# Gradient Descent Update
+## Weighted Error
 
-Not applicable.
+For a weak learner
 
-AdaBoost uses **adaptive weight updates instead of gradient descent**.
+error = Σ wᵢ I(yᵢ ≠ h(xᵢ))
+
+Where
+
+| Symbol | Meaning |
+|------|------|
+| I | indicator function |
+| yᵢ | true label |
+| h(xᵢ) | predicted label |
+
+---
+
+## Learner Weight
+
+The importance of each learner is
+
+α = 0.5 log((1 − error) / error)
+
+If error is small → α becomes large.
+
+---
+
+## Sample Weight Update
+
+Weights are updated after each iteration.
+
+Misclassified samples increase weight.
+
+Correct samples decrease weight.
+
+wᵢ = wᵢ × exp(−α yᵢ h(xᵢ))
+
+Then weights are normalized.
+
+wᵢ = wᵢ / Σ wᵢ
 
 ---
 
@@ -82,36 +134,48 @@ AdaBoost uses **adaptive weight updates instead of gradient descent**.
 |------|------|
 | n_estimator | number of weak learners |
 
-### Derived
+---
+
+### Derived During Training
 
 | Variable | Meaning |
 |------|------|
-| roots | decision stumps |
-| weights | model weights |
-| sample_weights | importance of each training sample |
-| threshold | split threshold |
+| roots | decision stump models |
+| weights | learner weights α |
+| sample_weights | importance of each sample |
+| threshold | stump split threshold |
 | feature_index | selected feature |
 
 ---
 
-# Vectorized Form
+### Derived During Prediction
+
+| Variable | Meaning |
+|------|------|
+| scores | accumulated weighted predictions |
+| preds | predictions from each stump |
+
+---
+
+# Loop / Vectorized Form
 
 Weighted error
 
 ```
-total_error = sum(sample_weights[misclassified])
+total_error = np.sum(sample_weights[misclassified])
 ```
 
-Model weight
+Learner weight
 
 ```
-alpha = 0.5 * log((1 - error) / error)
+alpha = 0.5 * np.log((1 - error) / error)
 ```
 
 Weight update
 
 ```
-w_i = w_i * exp(±alpha)
+w_i = w_i * exp(alpha)     # misclassified
+w_i = w_i * exp(-alpha)    # correct
 ```
 
 Normalization
@@ -122,37 +186,63 @@ w_i = w_i / sum(w_i)
 
 ---
 
-# Algorithm Steps
+# Complete Algorithm Steps
 
-Training
+## Training
 
-1 Initialize sample weights equally  
-2 Train weak learner  
-3 Compute weighted error  
-4 Compute model weight  
-5 Increase weight of misclassified samples  
-6 Normalize weights  
-7 Repeat for all estimators  
+1 Initialize sample weights
 
-Prediction
+wᵢ = 1/n
 
-1 Collect predictions from each weak learner  
-2 Combine predictions using model weights  
+2 Repeat **n_estimators times**
 
-Classification → weighted vote  
-Regression → weighted average
+Train weak learner using weighted dataset.
+
+Compute predictions of weak learner.
+
+Compute weighted error.
+
+Compute learner weight
+
+α = 0.5 log((1 − error)/error)
+
+Update sample weights
+
+Increase weight for misclassified samples.
+
+Decrease weight for correctly classified samples.
+
+Normalize weights.
+
+Store weak learner and its weight.
+
+---
+
+## Prediction
+
+For each sample
+
+Collect predictions from all weak learners.
+
+Classification
+
+Compute weighted vote.
+
+Regression
+
+Compute weighted average.
 
 ---
 
 # Time Complexity
 
-Training
+Training complexity
 
-O(n_estimators × tree_training_cost)
+O(n_estimators × stump_training_cost)
 
-Prediction
+Prediction complexity
 
-O(n_estimators × tree_depth)
+O(n_estimators)
 
 Where
 
@@ -164,7 +254,7 @@ Where
 
 ---
 
-# Implementation
+# Code Implementation
 
 ## AdaBoost Classification
 
@@ -173,10 +263,10 @@ class AdaBoost:
 
     def __init__(self,n_estimator):
 
-        self.n_estimator = n_estimator
-        self.roots = []
-        self.weights = []
-        self.feature_sorted = []
+        self.n_estimator = n_estimator      # number of weak learners
+        self.roots = []                     # list of trained decision stumps
+        self.weights = []                   # model weights alpha
+        self.feature_sorted = []            # sorted feature indices for faster splits
 
     def find_best_split(self,X,y):
 
@@ -184,15 +274,20 @@ class AdaBoost:
         best_ginni = float("inf")
         best_thresold = None
         best_feature = None
+
         for feature in range(n_features-1):
 
             sorted_indx = self.feature_sorted[:,feature]
             X_sorted = X[sorted_indx,feature]
             y_sorted = y[sorted_indx]
-            weight_sorted = X[sorted_indx,-1]
+
+            weight_sorted = X[sorted_indx,-1]     # sample weights
+
             n_classes = int(np.max(y))+1
+
             left_count = np.zeros(n_classes)
             right_count = np.bincount(y_sorted,weights=weight_sorted,minlength=n_classes)
+
             left_sum = 0
             right_sum = np.sum(weight_sorted)
 
@@ -202,6 +297,7 @@ class AdaBoost:
 
                 y_val = y_sorted[i-1]
                 w = weight_sorted[i-1]
+
                 left_count[y_val]+=w
                 right_count[y_val]-=w
 
@@ -214,16 +310,17 @@ class AdaBoost:
                 left_ginni = 1-np.sum(prob_left**2)
                 right_ginni = 1-np.sum(prob_right**2)
 
-
                 ginni = left_sum * left_ginni + right_sum * right_ginni
 
                 if(best_ginni>ginni):
                     best_ginni = ginni
                     best_feature = feature
                     best_thresold = (X_sorted[i] + X_sorted[i-1])/2
-            
+
         return best_feature,best_thresold
-            
+```
+
+```python
     def build_stump(self,X,y):
 
         feature,thresold = self.find_best_split(X,y)
@@ -231,10 +328,11 @@ class AdaBoost:
         left_indx = X[:,feature] <= thresold
         right_indx = ~left_indx
 
+        # majority class in each branch
         left_val = np.argmax(np.bincount(y[left_indx]))
         right_val = np.argmax(np.bincount(y[right_indx]))
 
-        # predictions of the stump
+        # predictions of stump
         preds = np.where(left_indx, left_val, right_val)
 
         # misclassified samples
@@ -243,57 +341,70 @@ class AdaBoost:
         # weighted error
         total_error = np.sum(X[misclassified, -1]) + 1e-6
 
+        # learner weight
         model_weight = 0.5 * np.log((1 - total_error) / total_error)
 
-        # weight update
+        # update sample weights
         X[misclassified, -1] *= np.exp(model_weight)
         X[~misclassified, -1] *= np.exp(-model_weight)
 
-        #normalize
+        # normalize weights
         total = np.sum(X[:,-1]) + 1e-6
         X[:,-1] = X[:,-1]/total
 
         left = Node(value=left_val)
         right = Node(value=right_val)
+
         root = Node(feature_index=feature,threshold=thresold,left=left,right=right)
 
         return root,model_weight
+```
 
+```python
     def fit(self,X,y):
 
         n_samples = X.shape[0]
+
         self.n_classes = int(np.max(y))+1
-        # add bias
+
+        # initialize sample weights
         ones = np.ones((n_samples,1))
         bias = ones/n_samples
+
         X = np.hstack((X,bias))
+
+        # pre-sort features for faster splitting
         self.feature_sorted = np.argsort(X[:,:-1],axis=0)
+
         for _ in range(self.n_estimator):
+
             root,weight = self.build_stump(X,y)
+
             self.roots.append(root)
             self.weights.append(weight)
+```
 
+```python
     def predict(self,X):
 
         n_samples = X.shape[0]
+
         scores = np.zeros((n_samples,self.n_classes))
 
         for root,weight in zip(self.roots,self.weights):
 
             left_idx = X[:,root.feature_index] <= root.threshold
+
             preds = np.where(left_idx, root.left.value, root.right.value)
 
             scores[np.arange(n_samples), preds] += weight
 
         return np.argmax(scores,axis=1)
-   
 ```
 
 ---
 
 ## AdaBoost Regression
-
-Regression version updates weights based on prediction error magnitude.
 
 ```python
 class AdaBoost:
@@ -304,114 +415,24 @@ class AdaBoost:
         self.roots = []
         self.weights = []
         self.feature_sorted = []
+```
 
-    def find_best_split(self,X,y):
-
-        n_samples,n_features = X.shape
-        best_sse = float("inf")
-        best_thresold = None
-        best_feature = None
-        for feature in range(n_features-1):
-
-            sorted_indx = self.feature_sorted[:,feature]
-            X_sorted = X[sorted_indx,feature]
-            y_sorted = y[sorted_indx]
-            weight_sorted = X[sorted_indx,-1]
-            left_sum = 0
-            left_sq_sum = 0
-            left_weight_sum = 0
-            right_sum = np.sum( weight_sorted * y_sorted)
-            right_sq_sum = np.sum( weight_sorted * y_sorted**2)
-            right_weight_sum = np.sum(weight_sorted)
-
-            for i in range(1,n_samples):
-
-                if(X_sorted[i]==X_sorted[i-1]): continue
-
-                y_val = y_sorted[i-1]
-                w = weight_sorted[i-1]
-                
-                left_sum += w*y_val
-                right_sum -= w*y_val
-
-                left_sq_sum += w*y_val**2
-                right_sq_sum-= w*y_val**2
-
-                left_weight_sum += w
-                right_weight_sum -=w
-
-                left = left_sq_sum - (left_sum**2)/(left_weight_sum+1e-6)
-                right = right_sq_sum - (right_sum**2)/(right_sq_sum+1e-6)
-
-                sse = left + right_sum * right
-
-                if(best_sse>sse):
-                    best_sse = sse
-                    best_feature = feature
-                    best_thresold = (X_sorted[i] + X_sorted[i-1])/2
-            
-        return best_feature,best_thresold
-            
-    def build_stump(self,X,y):
-
-        feature,thresold = self.find_best_split(X,y)
-
-        left_indx = X[:,feature] <= thresold
-        right_indx = ~left_indx
-
-        left_val = np.mean(y[left_indx])
-        right_val = np.mean(y[right_indx])
-
-        # predictions of the stump
-        preds = np.where(left_indx, left_val, right_val)
-
-        # weighted error
-        total_error = np.abs(y-preds) + 1e-6
-        model_weight = 0.5 * np.log((1 - total_error) / total_error)
-        beta = np.sum(model_weight * total_error)
-        beta = beta/(1-beta)
-
-        # weight update
-        X[:, -1] *= beta**(1-total_error)
-
-        #normalize
-        total = np.sum(X[:,-1]) + 1e-6
-        X[:,-1] = X[:,-1]/total
-
-        left = Node(value=left_val)
-        right = Node(value=right_val)
-        root = Node(feature_index=feature,threshold=thresold,left=left,right=right)
-
-        return root,model_weight
-
-    def fit(self,X,y):
-
-        n_samples = X.shape[0]
-        self.n_classes = int(np.max(y))+1
-        # add bias
-        ones = np.ones((n_samples,1))
-        bias = ones/n_samples
-        X = np.hstack((X,bias))
-        self.feature_sorted = np.argsort(X[:,:-1],axis=0)
-        for _ in range(self.n_estimator):
-            root,weight = self.build_stump(X,y)
-            self.roots.append(root)
-            self.weights.append(weight)
-
+```python
     def predict(self,X):
 
         n_samples = X.shape[0]
+
         preds = np.zeros(n_samples)
+
         weight_sum = np.sum(self.weights)
 
         for root,alpha in zip(self.roots,self.weights):
 
             left_idx = X[:,root.feature_index] <= root.threshold
+
             stump_pred = np.where(left_idx, root.left.value, root.right.value)
 
             preds += alpha * stump_pred
 
         return preds / weight_sum
-    
-
 ```
