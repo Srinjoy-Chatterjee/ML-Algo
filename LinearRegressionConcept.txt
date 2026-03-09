@@ -1,0 +1,5 @@
+1) x,y plot data
+2) create a line through the data calculate MSE (1/n * ∑(y-y')^2)
+3) rotate line bit by bit and calculate MSE
+4) take line with least MSE
+
