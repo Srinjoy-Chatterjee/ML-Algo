@@ -259,63 +259,98 @@ O(M × depth)
 ## Random Forest Regression
 
 ```python
-class RandomForestRegression:
+class RandomForestRegression(Regressor):
     def __init__(self,n_estimator,depth=5,min=20):
-        self.n_estimator = n_estimator     # number of trees
-        self.depth = depth                 # max tree depth
-        self.min = min                     # minimum samples to split
-        self.roots = []                    # list of tree roots
+        self.n_estimator = n_estimator
+        self.depth = depth
+        self.min = min
+        self.roots = []
 
     def find_best_split(self,X,y):
-
         n_samples,n_features = X.shape
-
-        # random subset of features
         k_features = np.random.choice(n_features,int(np.sqrt(n_features)),replace=False)
-
         min_sse = float('inf')
-
         best_thresold = None
         best_feature_indx = None
-```
 
-```python
+        for feature in k_features:
+
+            sorted_indx = np.argsort(X[:,feature])
+            X_sorted = X[sorted_indx,feature]
+            y_sorted = y[sorted_indx]
+            
+            left_sum = 0
+            left_sq_sum = 0
+            right_sum = np.sum(y_sorted)
+            right_sq_sum = np.sum(y_sorted**2)
+
+            for i in range(1,n_samples):
+
+                if(X_sorted[i]==X_sorted[i-1]): continue
+
+                y_val = y_sorted[i-1]
+                left_sum+=y_val
+                right_sum-=y_val
+                left_sq_sum+=y_val**2
+                right_sq_sum-=y_val**2
+                left_w = left_sq_sum - (left_sum)**2/i
+                right_w = right_sq_sum - (right_sum)**2/(n_samples-i)
+                sse = left_w + right_w
+
+                if(sse<min_sse):
+                    min_sse = sse
+                    best_thresold = (X_sorted[i-1] + X_sorted[i])/2
+                    best_feature_indx = feature
+
+        return best_feature_indx,best_thresold
+
+    def build_tree(self,X,y,depth):
+
+        n_samples,_ = X.shape
+
+        if(depth==self.depth or n_samples <= self.min):
+            return Node(value=np.mean(y))
+        
+        feature_indx,thresold = self.find_best_split(X,y)
+
+        if feature_indx is None :
+            return Node(value=np.mean(y))     
+               
+        left_indx = X[:,feature_indx]<=thresold
+        right_indx = ~left_indx
+        left_x = X[left_indx]
+        left_y = y[left_indx]
+        right_x = X[right_indx]
+        right_y = y[right_indx]
+        left_node = self.build_tree(left_x,left_y,depth=depth+1)
+        right_node = self.build_tree(right_x,right_y,depth=depth+1)
+
+        return Node(left=left_node,right=right_node,feature_index=feature_indx,threshold=thresold)
+
     def fit(self,X,y):
 
         n,_ = X.shape
 
         for _ in range(self.n_estimator):
-
-            # bootstrap sampling
             indx = np.random.choice(n,n,replace=True)
-
             new_X = X[indx]
-
             new_y = y[indx]
-
-            # build tree on sampled dataset
             self.roots.append(self.build_tree(new_X,new_y,0))
-```
 
-```python
+    def traverse(self,X,node:Node):
+        if(node.value is not None) : return node.value
+        if(X[node.feature_index]<=node.threshold) : return self.traverse(X,node.left)
+        else : return self.traverse(X,node.right)
+
     def predict(self,X):
-
         n = X.shape[0]
-
         y_pred = np.zeros(n)
-
         for i in range(n):
-
             pred = []
-
-            # collect predictions from all trees
             for root in self.roots:
-
                 pred.append(self.traverse(X[i],root))
-
-            # average prediction
             y_pred[i] = np.mean(pred)
-
+        
         return y_pred
 ```
 
@@ -333,47 +368,95 @@ Gini = 1 − Σ pᵢ²
 class RandomForestClassification:
 
     def __init__(self,n_estimator,depth=5,min=20):
+        self.n_estimator = n_estimator
+        self.depth = depth
+        self.min = min
+        self.roots = []
 
-        self.n_estimator = n_estimator     # number of trees
-        self.depth = depth                 # max depth
-        self.min = min                     # minimum samples
-        self.roots = []                    # list of tree roots
-```
+    def find_best_split(self,X,y):
 
-```python
+        n_samples,n_features = X.shape
+        n_classes = np.max(y)+1
+        k_features = np.random.choice(n_features,int(np.sqrt(n_features)),replace=False)
+        min_ginni = float('inf')
+        best_thresold = None
+        best_feature_indx = None
+
+        for feature in k_features:
+
+            sorted_indx = np.argsort(X[:,feature])
+            X_sorted = X[sorted_indx,feature]
+            y_sorted = y[sorted_indx]
+            
+            left_count = np.zeros(n_classes)
+            right_count = np.bincount(y_sorted,minlength=n_classes)
+
+            for i in range(1,n_samples):
+
+                if(X_sorted[i]==X_sorted[i-1]): continue
+
+                y_val = y_sorted[i-1]
+                left_count[y_val]+=1
+                right_count[y_val]-=1
+                left = i
+                right = n_samples-i
+                left_w = 1-np.sum((left_count/left)**2)
+                right_w = 1-np.sum((right_count/right)**2)
+                ginni = left/n_samples * left_w + right/n_samples * right_w
+
+                if(ginni<min_ginni):
+                    min_ginni = ginni
+                    best_thresold = (X_sorted[i-1] + X_sorted[i])/2
+                    best_feature_indx = feature
+
+        return best_feature_indx,best_thresold
+
+    def build_tree(self,X,y,depth):
+
+        n_samples,_ = X.shape
+
+        if(depth==self.depth or n_samples <= self.min or len(np.unique(y))==1):
+            return Node(value=np.argmax(np.bincount(y)))
+        
+        feature_indx,thresold = self.find_best_split(X,y)
+
+        if feature_indx is None :
+            counts = np.bincount(y)
+            return Node(value=np.argmax(counts))     
+               
+        left_indx = X[:,feature_indx]<=thresold
+        right_indx = ~left_indx
+        left_x = X[left_indx]
+        left_y = y[left_indx]
+        right_x = X[right_indx]
+        right_y = y[right_indx]
+        left_node = self.build_tree(left_x,left_y,depth=depth+1)
+        right_node = self.build_tree(right_x,right_y,depth=depth+1)
+
+        return Node(left=left_node,right=right_node,feature_index=feature_indx,threshold=thresold)
+
     def fit(self,X,y):
 
         n,_ = X.shape
 
         for _ in range(self.n_estimator):
-
-            # bootstrap sampling
             indx = np.random.choice(n,n,replace=True)
-
             new_X = X[indx]
-
             new_y = y[indx]
-
-            # train decision tree
             self.roots.append(self.build_tree(new_X,new_y,0))
-```
 
-```python
+    def traverse(self,X,node:Node):
+        if(node.value is not None) : return node.value
+        if(X[node.feature_index]<=node.threshold) : return self.traverse(X,node.left)
+        else : return self.traverse(X,node.right)
+
     def predict(self,X):
-
         n = X.shape[0]
-
         y_pred = np.zeros(n, dtype=int)
-
         for i in range(n):
-
-            # predictions from all trees
             preds = np.array([self.traverse(X[i],root) for root in self.roots])
-
-            # majority voting
             counts = np.bincount(preds)
-
             y_pred[i] = np.argmax(counts)
-
+        
         return y_pred
 ```

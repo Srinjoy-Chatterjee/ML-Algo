@@ -3,29 +3,28 @@ AdaBoost (Adaptive Boosting)
 
 AdaBoost is an ensemble learning algorithm that combines multiple **weak learners** to produce a strong predictive model.
 
-The core idea of AdaBoost is **sequential learning with adaptive sample weights**.
+The key idea is **sequential training with adaptive sample weights**.
 
-Instead of training models independently, AdaBoost trains them **one after another**.
-
+Instead of training models independently, AdaBoost trains them **one after another**.  
 After each model:
 
 • Misclassified samples receive **higher weights**  
-• Correctly classified samples receive **lower weights**
+• Correctly predicted samples receive **lower weights**
 
-This forces the next weak learner to focus more on difficult samples.
+This forces the next weak learner to focus more on the difficult samples.
 
-In this implementation the weak learner is a **decision stump** (a decision tree with depth 1).
+In this implementation the weak learner is a **decision stump** (a decision tree with depth = 1).
 
 Two variants are implemented:
 
-AdaBoost Classification  
-AdaBoost Regression
+• **AdaBoostClassifier** → classification  
+• **AdaBoostRegressor** → regression
 
 ---
 
 # Model
 
-The final model is a **weighted combination of weak learners**.
+AdaBoost constructs the final model as a **weighted combination of weak learners**.
 
 Assume there are **T weak learners**
 
@@ -39,7 +38,9 @@ Each learner receives a weight **αₜ** based on its performance.
 
 Final classifier
 
+```
 f(x) = sign( Σ αₜ hₜ(x) )
+```
 
 Where
 
@@ -47,9 +48,9 @@ Where
 |------|------|
 | hₜ(x) | prediction of weak learner t |
 | αₜ | weight of weak learner |
-| T | number of weak learners |
+| T | number of learners |
 
-Learners with **lower error receive higher weights**.
+Learners with **lower error receive larger weights**.
 
 ---
 
@@ -57,23 +58,49 @@ Learners with **lower error receive higher weights**.
 
 Regression uses a weighted average.
 
+```
 f(x) = ( Σ αₜ hₜ(x) ) / ( Σ αₜ )
+```
 
 Where
 
 | Symbol | Meaning |
 |------|------|
 | αₜ | learner weight |
+| hₜ(x) | regression prediction |
 
 ---
 
 # Math Implementation
 
-## Initialization
+AdaBoost uses **different formulations for classification and regression**.
 
-Each training sample starts with equal weight.
+---
 
+# AdaBoost Classification
+
+AdaBoost classification minimizes **exponential loss**.
+
+```
+L = Σ exp(-y f(x))
+```
+
+Where
+
+| Symbol | Meaning |
+|------|------|
+| y | true label |
+| f(x) | ensemble prediction |
+
+---
+
+## Sample Weight Initialization
+
+All samples start with equal importance.
+
+```
 wᵢ = 1 / n
+```
 
 Where
 
@@ -86,43 +113,215 @@ Where
 
 ## Weighted Error
 
-For a weak learner
+Weak learner error is computed using **weighted misclassification**.
 
+```
 error = Σ wᵢ I(yᵢ ≠ h(xᵢ))
+```
 
 Where
 
 | Symbol | Meaning |
 |------|------|
+| wᵢ | weight of sample i |
 | I | indicator function |
 | yᵢ | true label |
 | h(xᵢ) | predicted label |
+
+Indicator function
+
+```
+I(condition) =
+1 if condition is true
+0 otherwise
+```
 
 ---
 
 ## Learner Weight
 
-The importance of each learner is
+The importance of each weak learner is
 
+```
 α = 0.5 log((1 − error) / error)
+```
 
-If error is small → α becomes large.
+Properties
+
+| Error | α |
+|------|------|
+| small | large positive α |
+| 0.5 | α = 0 |
+| > 0.5 | negative α |
 
 ---
 
 ## Sample Weight Update
 
-Weights are updated after each iteration.
+Weights are updated using
 
-Misclassified samples increase weight.
+```
+wᵢ = wᵢ × exp(-α yᵢ h(xᵢ))
+```
 
-Correct samples decrease weight.
+Meaning
 
-wᵢ = wᵢ × exp(−α yᵢ h(xᵢ))
+| Case | Weight Update |
+|------|------|
+| correct prediction | weight decreases |
+| wrong prediction | weight increases |
 
-Then weights are normalized.
+---
 
+## Weight Normalization
+
+After updating weights they are normalized
+
+```
 wᵢ = wᵢ / Σ wᵢ
+```
+
+---
+
+# Weighted Gini (Used in Stump Training)
+
+Since samples have weights, impurity must also be weighted.
+
+Class probability
+
+```
+p_k = (Σ weights of class k) / (total weight)
+```
+
+Weighted Gini impurity
+
+```
+Gini = 1 − Σ p_k²
+```
+
+Split impurity
+
+```
+Gini_split =
+W_left * Gini_left +
+W_right * Gini_right
+```
+
+Where
+
+| Symbol | Meaning |
+|------|------|
+| W_left | total weight of left node |
+| W_right | total weight of right node |
+
+The split with the **lowest weighted impurity** is selected.
+
+---
+
+# AdaBoost Regression
+
+AdaBoost regression follows the **AdaBoost.R2 algorithm**.
+
+Instead of classification error it uses **absolute prediction error**.
+
+---
+
+## Sample Weight Initialization
+
+```
+wᵢ = 1 / n
+```
+
+---
+
+## Prediction Error
+
+For each sample
+
+```
+eᵢ = |yᵢ − h(xᵢ)|
+```
+
+Normalized error
+
+```
+eᵢ = eᵢ / max(e)
+```
+
+---
+
+## Model Error
+
+Weighted error
+
+```
+E = Σ wᵢ eᵢ
+```
+
+---
+
+## Model Weight Factor
+
+```
+β = E / (1 − E)
+```
+
+Learner weight
+
+```
+α = log(1 / β)
+```
+
+---
+
+## Sample Weight Update
+
+Weights are updated using
+
+```
+wᵢ = wᵢ × β^(1 − eᵢ)
+```
+
+Meaning
+
+| Error | Weight Update |
+|------|------|
+| small error | weight decreases |
+| large error | weight increases |
+
+---
+
+## Weight Normalization
+
+```
+wᵢ = wᵢ / Σ wᵢ
+```
+
+---
+
+# Weighted SSE (Used in Regression Stumps)
+
+Regression stumps minimize **weighted sum of squared errors**.
+
+Weighted mean
+
+```
+μ = ( Σ wᵢ yᵢ ) / ( Σ wᵢ )
+```
+
+Weighted SSE
+
+```
+SSE = Σ wᵢ (yᵢ − μ)²
+```
+
+Split objective
+
+```
+SSE_split = SSE_left + SSE_right
+```
+
+The split with the **minimum weighted SSE** is chosen.
 
 ---
 
@@ -142,8 +341,8 @@ wᵢ = wᵢ / Σ wᵢ
 |------|------|
 | roots | decision stump models |
 | weights | learner weights α |
-| sample_weights | importance of each sample |
-| threshold | stump split threshold |
+| sample_weights | importance of each training sample |
+| threshold | split threshold |
 | feature_index | selected feature |
 
 ---
@@ -159,10 +358,12 @@ wᵢ = wᵢ / Σ wᵢ
 
 # Loop / Vectorized Form
 
+## Classification
+
 Weighted error
 
 ```
-total_error = np.sum(sample_weights[misclassified])
+error = np.sum(sample_weights[misclassified])
 ```
 
 Learner weight
@@ -174,83 +375,143 @@ alpha = 0.5 * np.log((1 - error) / error)
 Weight update
 
 ```
-w_i = w_i * exp(alpha)     # misclassified
-w_i = w_i * exp(-alpha)    # correct
+sample_weights[misclassified] *= np.exp(alpha)
+sample_weights[~misclassified] *= np.exp(-alpha)
 ```
 
 Normalization
 
 ```
-w_i = w_i / sum(w_i)
+sample_weights /= np.sum(sample_weights)
+```
+
+---
+
+## Regression
+
+Prediction error
+
+```
+error = np.abs(y - preds)
+```
+
+Normalize error
+
+```
+error = error / np.max(error)
+```
+
+Model error
+
+```
+E = np.sum(sample_weights * error)
+```
+
+Beta
+
+```
+beta = E / (1 - E)
+```
+
+Weight update
+
+```
+sample_weights *= beta ** (1 - error)
+```
+
+Normalization
+
+```
+sample_weights /= np.sum(sample_weights)
 ```
 
 ---
 
 # Complete Algorithm Steps
 
-## Training
+## AdaBoost Classification Training
 
 1 Initialize sample weights
 
+```
 wᵢ = 1/n
+```
 
-2 Repeat **n_estimators times**
+2 For each estimator
 
-Train weak learner using weighted dataset.
+Train decision stump using weighted dataset.
 
-Compute predictions of weak learner.
+Compute predictions.
 
-Compute weighted error.
+Compute weighted error
+
+```
+error = Σ wᵢ I(yᵢ ≠ h(xᵢ))
+```
 
 Compute learner weight
 
+```
 α = 0.5 log((1 − error)/error)
+```
 
-Update sample weights
-
-Increase weight for misclassified samples.
-
-Decrease weight for correctly classified samples.
+Update sample weights.
 
 Normalize weights.
 
-Store weak learner and its weight.
+Store stump and learner weight.
+
+---
+
+## AdaBoost Regression Training
+
+1 Initialize sample weights
+
+```
+wᵢ = 1/n
+```
+
+2 Train regression stump.
+
+3 Compute prediction errors.
+
+4 Compute model error
+
+```
+E = Σ wᵢ eᵢ
+```
+
+5 Compute learner weight
+
+```
+α = log(1/β)
+```
+
+6 Update sample weights
+
+```
+wᵢ = wᵢ × β^(1 − eᵢ)
+```
+
+7 Normalize weights.
 
 ---
 
 ## Prediction
 
-For each sample
-
-Collect predictions from all weak learners.
+For each input sample collect predictions from all weak learners.
 
 Classification
 
-Compute weighted vote.
+```
+sign( Σ αₜ hₜ(x) )
+```
 
 Regression
 
-Compute weighted average.
-
----
-
-# Time Complexity
-
-Training complexity
-
-O(n_estimators × stump_training_cost)
-
-Prediction complexity
-
-O(n_estimators)
-
-Where
-
-| Symbol | Meaning |
-|------|------|
-| n_estimators | number of weak learners |
-| n | number of samples |
-| d | number of features |
+```
+( Σ αₜ hₜ(x) ) / ( Σ αₜ )
+```
 
 ---
 
@@ -376,6 +637,7 @@ class AdaBoostClassifier:
             scores[np.arange(n_samples), preds] += weight
 
         return np.argmax(scores,axis=1)
+   
 ```
 
 ---
@@ -499,4 +761,5 @@ class AdaBoostRegressor:
             preds += alpha * stump_pred
 
         return preds / weight_sum
+
 ```
