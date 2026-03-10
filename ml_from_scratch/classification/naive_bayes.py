@@ -40,7 +40,7 @@ class NaiveBayesGaussian(classifier):
         self.means = feature_count /np.bincount(group_index)[:,None]
         diff = X[:,None,:]-self.means
         diff_sqr = diff ** 2
-        weighted_sqr_diff = y_onehot[:,:,None] - diff_sqr
+        weighted_sqr_diff = y_onehot[:,:,None] * diff_sqr
         var_sum = np.sum(weighted_sqr_diff,axis=0)
         self.var = var_sum/np.bincount(group_index)[:,None]
 

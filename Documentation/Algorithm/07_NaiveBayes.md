@@ -228,7 +228,7 @@ self.means = feature_count / np.bincount(group_index)[:,None] → (k , d)
 ```
 
 ```
-weighted_sqr_diff = y_onehot[:,:,None] - diff_sqr → (n_samples , k , d)
+weighted_sqr_diff = y_onehot[:,:,None] * diff_sqr → (n_samples , k , d)
 ```
 
 ```
@@ -415,7 +415,7 @@ class NaiveBayesGaussian:
 
         diff_sqr = diff ** 2
 
-        weighted_sqr_diff = y_onehot[:,:,None] - diff_sqr
+        weighted_sqr_diff = y_onehot[:,:,None] * diff_sqr
 
         var_sum = np.sum(weighted_sqr_diff,axis=0)
 
