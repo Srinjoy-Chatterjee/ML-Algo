@@ -46,7 +46,15 @@ class NaiveBayesGaussian(classifier):
 
         self.var+=1e-9
 
-    def predict(self,X):
-        log_likelihood = self.log_probability_groups+ -0.5 * (np.log(2*np.pi*self.var)+((X[:, None, :] - self.means) ** 2)/self.var)
-        return self.groups[np.argmax(log_likelihood,axis=1)]
+    def predict(self, X):
+
+        log_likelihood = -0.5 * (
+            np.log(2*np.pi*self.var) +
+            ((X[:, None, :] - self.means) ** 2)/self.var
+        )
+
+        # sum across features
+        log_prob = self.log_probability_groups + np.sum(log_likelihood, axis=2)
+
+        return self.groups[np.argmax(log_prob, axis=1)]
   

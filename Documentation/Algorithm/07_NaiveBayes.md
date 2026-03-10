@@ -207,6 +207,38 @@ Feature counting
 feature_count = y_onehot.T @ X → (k , d)
 ```
 
+Multinomial
+
+```
+smooth_total = np.sum(smooth_fc,axis=1,keepdims=True) → (k , 1) 
+```
+
+```
+self.log_probability_features_per_group = np.log(smooth_fc/smooth_total) → (k , d)
+```
+
+Gaussian
+
+```
+self.means = feature_count / np.bincount(group_index)[:,None] → (k , d)
+```
+
+```
+ diff = X[:,None,:] - self.means → (n_samples , k , d) → (n_samples , k , d)
+```
+
+```
+weighted_sqr_diff = y_onehot[:,:,None] - diff_sqr → (n_samples , k , d)
+```
+
+```
+var_sum = np.sum(weighted_sqr_diff,axis=0) → (k , d)
+```
+
+```
+self.var = var_sum / np.bincount(group_index)[:,None] → (k , d)
+```
+
 Prediction (Multinomial)
 
 ```
@@ -214,6 +246,13 @@ log_prob = log_prior + X @ log_feature_prob.T → (n_test , k)
 ```
 
 Prediction (Gaussian)
+
+```
+        log_likelihood = -0.5 * (
+            np.log(2*np.pi*self.var) +
+            ((X[:, None, :] - self.means) ** 2)/self.var
+        ) → (n_test , k , d)
+```
 
 ```
 log_likelihood = log_prior + gaussian_log_density → (n_test , k)
@@ -388,11 +427,13 @@ class NaiveBayesGaussian:
     def predict(self,X):
 
         # compute Gaussian log likelihood
-        log_likelihood = self.log_probability_groups + -0.5 * (
+        log_likelihood = -0.5 * (
             np.log(2*np.pi*self.var) +
             ((X[:, None, :] - self.means) ** 2)/self.var
         )
 
-        # choose class with maximum likelihood
-        return self.groups[np.argmax(log_likelihood,axis=1)]
+        # sum across features
+        log_prob = self.log_probability_groups + np.sum(log_likelihood, axis=2)
+
+        return self.groups[np.argmax(log_prob, axis=1)]
 ```

@@ -319,10 +319,10 @@ class LogisticRegression :
                 np.exp(z)/(1+np.exp(z))
             )
 
-            # compute error with regularization
-            error = prediction - y + 2 * self.l1 * self.M + self.l2 * np.sign(self.M)
+            # compute error 
+            error = prediction - y 
 
-            gradient = 1/n * (X.T @ error)   # compute gradient
+            gradient = 1/n * (X.T @ error) + 2 * self.l2 * self.M + self.l1 * np.sign(self.M)   # compute gradient with regularization
 
             self.M = self.M - self.lr * gradient   # gradient descent update
 
