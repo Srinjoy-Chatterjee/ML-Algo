@@ -105,6 +105,7 @@ Where
 |------|------|
 | ∇L | gradient of loss |
 | Xᵀ | transpose of X |
+|e   | error |
 
 This gradient indicates how the parameters should change to minimize the loss.
 

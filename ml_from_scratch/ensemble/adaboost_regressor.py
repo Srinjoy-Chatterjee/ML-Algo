@@ -49,7 +49,7 @@ class AdaBoostRegressor(Regressor):
                 left = left_sq_sum - (left_sum**2)/(left_weight_sum+1e-6)
                 right = right_sq_sum - (right_sum**2)/(right_sq_sum+1e-6)
 
-                sse = left + right_sum * right
+                sse = left_sum * left + right_sum * right
 
                 if(best_sse>sse):
                     best_sse = sse

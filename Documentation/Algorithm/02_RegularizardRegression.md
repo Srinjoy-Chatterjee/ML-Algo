@@ -3,6 +3,8 @@ Regularized Linear Regression (Lasso, Ridge, ElasticNet)
 
 Regularization is a technique used to **reduce overfitting** in machine learning models by penalizing large parameter values.
 
+**NOTE:** Regularization can be performend of any model which has loss function
+
 In standard Linear Regression, the model tries to minimize prediction error.  
 However, if the model becomes too complex, it may fit the training data very well but perform poorly on unseen data.
 
