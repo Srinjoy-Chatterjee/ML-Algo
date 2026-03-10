@@ -179,5 +179,5 @@ class Score(Enum):
     LOG_LOSS = log_loss
     JACCARD_INDEX = jaccard_index
 
-    def __call__(self, y_true, y_pred):
-        return self.value(y_true, y_pred)
+    def __call__(self, y_true, y_pred, *args, **kwargs):
+        return self.value(y_true, y_pred, *args, **kwargs)

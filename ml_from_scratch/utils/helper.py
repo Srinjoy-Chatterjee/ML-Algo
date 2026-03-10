@@ -1,5 +1,6 @@
 from enum import Enum
 import numpy as np
+
 class Kernel(Enum):
     def linear(x,z): 
         return x @ z.T
@@ -29,7 +30,7 @@ class Kernel(Enum):
     
 class Node:
     def __init__(self,left=None,right=None,feature_index=None,threshold=None,value=None):
-        self.Left = left
+        self.left = left
         self.right = right
         self.feature_index = feature_index
         self.threshold = threshold
