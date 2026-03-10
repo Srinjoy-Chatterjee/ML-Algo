@@ -1,0 +1,531 @@
+# Algorithm
+Score Metrics
+
+Score metrics are used to **evaluate the performance of machine learning models** by comparing predicted values with true values.
+
+Different metrics are used depending on the task.
+
+| Task | Common Metrics |
+|-----|-----|
+Regression | MSE, MAE, RMSE, R² |
+Classification | Accuracy, Precision, Recall, F1 |
+Probability Models | Log Loss |
+
+These metrics measure:
+
+• prediction error  
+• classification correctness  
+• probability quality  
+
+---
+
+# Model
+
+Evaluation metrics operate on two variables.
+
+| Symbol | Meaning |
+|------|------|
+| y_true | true target values |
+| y_pred | predicted values |
+
+For regression:
+
+y_pred ∈ ℝ
+
+For classification:
+
+y_pred ∈ {0,1,...,k}
+
+Metrics compute the difference between predictions and actual values.
+
+---
+
+# Math Implementation
+
+Metrics fall into two main categories.
+
+### Regression Metrics
+
+These measure **prediction error between continuous values**.
+
+Example
+
+Mean Squared Error
+
+MSE = (1/n) Σ (y_pred − y_true)²
+
+Where
+
+| Symbol | Meaning |
+|------|------|
+| n | number of samples |
+| y_true | true value |
+| y_pred | predicted value |
+
+---
+
+### Classification Metrics
+
+Classification metrics are derived from the **confusion matrix**.
+
+Confusion Matrix
+
+| | Predicted Positive | Predicted Negative |
+|---|---|---|
+Actual Positive | TP | FN |
+Actual Negative | FP | TN |
+
+Where
+
+| Symbol | Meaning |
+|------|------|
+| TP | true positives |
+| FP | false positives |
+| FN | false negatives |
+| TN | true negatives |
+
+Many classification metrics are computed using these values.
+
+---
+
+# Regression Metrics
+
+## R² Score
+
+R² measures how much variance in the target variable is explained by the model.
+
+R² = 1 − (SS_res / SS_tot)
+
+Where
+
+SS_res = Σ (y_pred − y_true)²  
+SS_tot = Σ (y_true − mean(y_true))²
+
+R² ranges from **−∞ to 1**.
+
+---
+
+## Relative Absolute Score (RA)
+
+RA compares model performance with a naive predictor using the mean.
+
+RA = 1 − (Σ|y_pred − y_true| / Σ|y_true − mean(y_true)|)
+
+---
+
+## Mean Squared Error (MSE)
+
+MSE measures the **average squared error**.
+
+MSE = (1/n) Σ (y_pred − y_true)²
+
+Large errors are penalized more strongly.
+
+---
+
+## Root Mean Squared Error (RMSE)
+
+RMSE is the square root of MSE.
+
+RMSE = √MSE
+
+It has the same unit as the target variable.
+
+---
+
+## Mean Absolute Error (MAE)
+
+MAE measures the **average absolute error**.
+
+MAE = (1/n) Σ |y_pred − y_true|
+
+Less sensitive to outliers than MSE.
+
+---
+
+## Mean Absolute Percentage Error (MAPE)
+
+MAPE expresses error as a percentage.
+
+MAPE = (1/n) Σ |(y_true − y_pred) / y_true| × 100
+
+Used when relative error is important.
+
+---
+
+## Mean Squared Log Error (MSLE)
+
+MSLE compares predictions in logarithmic space.
+
+MSLE = (1/n) Σ (log(1 + y_pred) − log(1 + y_true))²
+
+Useful when large values dominate the dataset.
+
+---
+
+## Mean Absolute Log Error (MAL)
+
+MAL uses the absolute difference in log space.
+
+MAL = (1/n) Σ |log(1 + y_pred) − log(1 + y_true)|
+
+---
+
+# Classification Metrics
+
+Classification metrics rely on confusion matrix components.
+
+---
+
+## Precision
+
+Precision measures prediction correctness for the positive class.
+
+Precision = TP / (TP + FP)
+
+High precision means fewer false positives.
+
+---
+
+## Recall (Sensitivity)
+
+Recall measures the proportion of true positives detected.
+
+Recall = TP / (TP + FN)
+
+High recall means fewer false negatives.
+
+---
+
+## Specificity
+
+Specificity measures the ability to correctly detect negative samples.
+
+Specificity = TN / (TN + FP)
+
+---
+
+## F1 Score
+
+F1 combines precision and recall.
+
+F1 = 2 × (Precision × Recall) / (Precision + Recall)
+
+Used when both precision and recall are important.
+
+---
+
+## Balanced Accuracy
+
+Balanced Accuracy averages recall and specificity.
+
+Balanced Accuracy = (Recall + Specificity) / 2
+
+Useful for imbalanced datasets.
+
+---
+
+## Jaccard Index
+
+Jaccard measures similarity between predicted and actual labels.
+
+Jaccard = TP / (TP + FP + FN)
+
+---
+
+## Matthews Correlation Coefficient
+
+MCC measures correlation between predictions and true labels.
+
+MCC = (TP × TN − FP × FN) / √((TP+FP)(TP+FN)(TN+FP)(TN+FN))
+
+Values range from **−1 to 1**.
+
+---
+
+## Misclassification Error
+
+Misclassification error measures incorrect predictions.
+
+Error = number_of_wrong_predictions / total_samples
+
+---
+
+## Accuracy
+
+Accuracy measures overall correctness.
+
+Accuracy = (TP + TN) / total_samples
+
+---
+
+# Probabilistic Metric
+
+## Log Loss (Cross Entropy)
+
+Log Loss evaluates probabilistic classifiers.
+
+L = − (1/n) Σ Σ yᵢⱼ log(pᵢⱼ)
+
+Where
+
+| Symbol | Meaning |
+|------|------|
+| yᵢⱼ | true class label |
+| pᵢⱼ | predicted probability |
+
+Lower log loss indicates better probability estimates.
+
+---
+
+# Variables
+
+| Variable | Meaning |
+|------|------|
+| y_true | true labels or values |
+| y_pred | predicted labels or values |
+| TP | true positives |
+| FP | false positives |
+| FN | false negatives |
+| TN | true negatives |
+
+---
+
+# Loop / Vectorized Form
+
+Most metric calculations use **vectorized NumPy operations**.
+
+Example
+
+```
+error = y_pred - y_true
+mse = np.mean(error ** 2)
+```
+
+Vectorization avoids loops and improves computational efficiency.
+
+---
+
+# Time Complexity
+
+Let
+
+| Symbol | Meaning |
+|------|------|
+| n | number of samples |
+
+Metric computation complexity
+
+O(n)
+
+All metrics are computed with **linear complexity in the number of samples**.
+
+---
+
+# Code Implementation
+
+```python
+import numpy as np
+from enum import Enum
+
+
+# ==============================
+# Regression
+# ==============================
+
+def r2_score(y_true, y_pred):
+    ss_res = np.sum((y_pred - y_true) ** 2)
+    ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
+    return 1 - (ss_res / ss_tot)
+
+
+def ra_score(y_true, y_pred):
+    sa_res = np.sum(np.abs(y_pred - y_true))
+    sa_tot = np.sum(np.abs(y_true - np.mean(y_true)))
+    return 1 - (sa_res / sa_tot)
+
+
+def mean_squared_error(y_true, y_pred):
+    return np.mean((y_pred - y_true) ** 2)
+
+
+def root_mean_squared_error(y_true, y_pred):
+    return mean_squared_error(y_true, y_pred) ** 0.5
+
+
+def mean_absolute_error(y_true, y_pred):
+    return np.mean(np.abs(y_pred - y_true))
+
+
+def mean_absolute_percentage_error(y_true, y_pred):
+    return np.mean(np.abs((y_true - y_pred) / (y_true + 1e-10))) * 100
+
+
+def mean_squared_log_error(y_true, y_pred):
+    return np.mean((np.log1p(y_pred) - np.log1p(y_true)) ** 2)
+
+
+def mean_absolute_log_error(y_true, y_pred):
+    return np.mean(np.abs(np.log1p(y_pred) - np.log1p(y_true)))
+
+
+# ==============================
+# Classification Helpers
+# ==============================
+
+def confusion_matrix(y_true, y_pred):
+    unique_classes = np.unique(np.concatenate((y_true, y_pred)))
+    matrix = np.zeros((len(unique_classes), len(unique_classes)), dtype=int)
+
+    for true, pred in zip(y_true, y_pred):
+        true_index = np.where(unique_classes == true)[0][0]
+        pred_index = np.where(unique_classes == pred)[0][0]
+        matrix[true_index][pred_index] += 1
+
+    return matrix
+
+
+def _classification_components(y_true, y_pred, classification):
+    cm = confusion_matrix(y_true, y_pred)
+
+    if classification == -1:
+        tp = np.diag(cm)
+        fp = np.sum(cm, axis=0) - tp
+        fn = np.sum(cm, axis=1) - tp
+        tn = np.sum(cm) - (tp + fp + fn)
+    else:
+        tp = cm[classification][classification]
+        fp = np.sum(cm[:, classification]) - tp
+        fn = np.sum(cm[classification, :]) - tp
+        tn = np.sum(cm) - (tp + fp + fn)
+
+    return tp, fp, fn, tn
+
+
+# ==============================
+# Classification Metrics
+# ==============================
+
+def precision_score(y_true, y_pred, classification=-1):
+    tp, fp, _, _ = _classification_components(y_true, y_pred, classification)
+    precision = tp / (tp + fp + 1e-10)
+    return np.mean(precision)
+
+
+def recall_score(y_true, y_pred, classification=-1): #(SENSITIVITY)
+    tp, _, fn, _ = _classification_components(y_true, y_pred, classification)
+    recall = tp / (tp + fn + 1e-10)
+    return np.mean(recall)
+
+
+def specificity_score(y_true, y_pred, classification=-1):
+    _, fp, _, tn = _classification_components(y_true, y_pred, classification)
+    specificity = tn / (tn + fp + 1e-10)
+    return np.mean(specificity)
+
+
+def f1_score(y_true, y_pred, classification=-1):
+    precision = precision_score(y_true, y_pred, classification)
+    recall = recall_score(y_true, y_pred, classification)
+    return 2 * (precision * recall) / (precision + recall + 1e-10)
+
+
+def balanced_accuracy_score(y_true, y_pred, classification=-1):
+    recall = recall_score(y_true, y_pred, classification)
+    specificity = specificity_score(y_true, y_pred, classification)
+    return (recall + specificity) / 2
+
+def jaccard_index(y_true,y_pred):
+    tp, fp, fn, _ = _classification_components(y_true, y_pred, -1)
+    interaction = tp # np.sum((y_true == 1) & (y_pred == 1))
+    union = tp+fp+fn # np.sum((y_true == 1) | (y_pred == 1))
+    return interaction / (union + 1e-10)
+
+
+def matthews_corrcoef(y_true, y_pred, classification=-1):
+    tp, fp, fn, tn = _classification_components(y_true, y_pred, classification)
+
+    numerator = (tp * tn) - (fp * fn)
+    denominator = np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+
+    return numerator / (denominator + 1e-10)
+
+
+def missclassification_error(y_true, y_pred):
+    return np.mean(y_true != y_pred)
+
+
+def accuracy_score(y_true, y_pred):
+    return np.mean(y_true == y_pred)
+
+
+def classification_report(y_true, y_pred):
+    return {
+        'precision': precision_score(y_true, y_pred),
+        'recall': recall_score(y_true, y_pred),
+        'f1_score': f1_score(y_true, y_pred),
+        'accuracy': accuracy_score(y_true, y_pred)
+    }
+
+def log_loss(y_true,y_pred): # minimize (CROSS ENTROPY)
+    """
+    y_true : one-hot encoded true labels (n_samples, n_classes)
+    y_pred : predicted probabilities (n_samples, n_classes)
+    """
+    eps = 1e-10   
+    y_pred = np.clip(y_pred,eps,1-eps)
+    loss = -np.mean(np.sum(y_true*np.log(y_pred),axis=1))
+    return loss
+
+
+
+
+# ==============================
+# Enum Wrapper
+# ==============================
+
+class Score(Enum):
+    R2 = r2_score
+    RA = ra_score
+    MSE = mean_squared_error
+    MAE = mean_absolute_error
+    RMSE = root_mean_squared_error
+    MAPE = mean_absolute_percentage_error
+    MSLE = mean_squared_log_error
+    MAL = mean_absolute_log_error
+
+    ACCURACY = accuracy_score
+    PRECISION = precision_score
+    RECALL = recall_score
+    CLASSIFICATION_REPORT = classification_report
+    F1 = f1_score
+    SPECIFICITY = specificity_score
+    BALANCED_ACCURACY = balanced_accuracy_score
+    MCC = matthews_corrcoef
+    MISSCLASSIFICATION_ERROR = missclassification_error
+    LOG_LOSS = log_loss
+    JACCARD_INDEX = jaccard_index
+
+    def __call__(self, y_true, y_pred, *args, **kwargs):
+        return self.value(y_true, y_pred, *args, **kwargs)
+```
+
+---
+
+# Enum Wrapper
+
+The `Score` Enum provides a unified interface for all metrics.
+
+Example usage
+
+```
+Score.MSE(y_true, y_pred)
+Score.ACCURACY(y_true, y_pred)
+Score.F1(y_true, y_pred)
+```
+
+This allows metrics to be passed directly to other components such as:
+
+• K-Fold Cross Validation  
+• Bias–Variance Analysis  
+• Model Evaluation
