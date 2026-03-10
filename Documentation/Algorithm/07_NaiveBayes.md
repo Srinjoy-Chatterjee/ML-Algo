@@ -31,8 +31,8 @@ Where
 
 | Symbol | Meaning |
 |------|------|
-| P(y | x) | posterior probability |
-| P(x | y) | likelihood |
+| P(y \| x) | posterior probability |
+| P(x \| y) | likelihood |
 | P(y) | prior probability |
 | P(x) | evidence |
 
@@ -88,7 +88,7 @@ Where
 | Symbol | Meaning |
 |------|------|
 | xᵢ | feature count |
-| P(xᵢ | y=c) | probability of feature i in class c |
+| P(xᵢ \| y=c) | probability of feature i in class c |
 
 Feature probabilities are estimated using **frequency counts**.
 
@@ -192,31 +192,31 @@ This is the form used in the implementation.
 Class prior computation
 
 ```
-probability_groups = bincount(labels) / n_samples
+probability_groups = bincount(labels) / n_samples → (k)
 ```
 
 One-hot encoding
 
 ```
-y_onehot = eye(n_classes)[group_index]
+y_onehot = eye(n_classes)[group_index] → (n_samples , k)
 ```
 
 Feature counting
 
 ```
-feature_count = y_onehot.T @ X
+feature_count = y_onehot.T @ X → (k , d)
 ```
 
 Prediction (Multinomial)
 
 ```
-log_prob = log_prior + X @ log_feature_prob.T
+log_prob = log_prior + X @ log_feature_prob.T → (n_test , k)
 ```
 
 Prediction (Gaussian)
 
 ```
-log_likelihood = log_prior + gaussian_log_density
+log_likelihood = log_prior + gaussian_log_density → (n_test , k)
 ```
 
 Vectorization allows computing probabilities for **all samples and classes simultaneously**.

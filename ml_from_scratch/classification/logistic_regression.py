@@ -22,8 +22,8 @@ class LogisticRegression(Classifier) :
         for _ in range(self.epoch):
             z = X @ self.M
             prediction = np.where(z>=0,1/(1+np.exp(-z)),np.exp(z)/(1+np.exp(z)))
-            error = prediction - y + 2 * self.l1 * self.M + self.l2 * np.sign(self.M) 
-            gradiant = 1/n *  (X.T @ error)
+            error = prediction - y 
+            gradiant = 1/n *  (X.T @ error) + 2 * self.l2 * self.M + self.l1 * np.sign(self.M)
             self.M = self.M- self.lr * gradiant
 
     def predict(self,X):
