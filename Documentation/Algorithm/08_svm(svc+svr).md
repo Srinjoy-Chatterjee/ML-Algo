@@ -3,35 +3,42 @@ Support Vector Machines (SVC, Kernel SVC, Kernel SVR)
 
 Support Vector Machines (SVM) are supervised learning algorithms used for **classification and regression**.
 
-The key idea of SVM is to find a **hyperplane that separates classes with the maximum margin**.
+The central idea of SVM is to find a **decision boundary (hyperplane) that maximizes the margin between classes**.
 
-Margin = distance between the separating hyperplane and the closest training points.
+Margin = distance between the separating hyperplane and the closest training samples.
 
-The training samples that lie closest to the hyperplane are called **support vectors**, and they determine the final model.
+The samples closest to the decision boundary are called **support vectors**, and they determine the final model.
 
-SVM can solve **linear and non-linear problems**.
+SVM can solve both:
 
-Linear SVM → uses linear hyperplane  
-Kernel SVM → uses kernel functions to map data into higher-dimensional space
+• **Linear problems**  
+• **Non-linear problems using kernel functions**
 
-Two variants implemented here:
+Variants implemented:
 
-• **SVC** → classification  
-• **SVR** → regression using epsilon-insensitive loss  
+| Variant | Task |
+|------|------|
+SVC | Linear classification |
+Kernel SVC | Nonlinear classification |
+Kernel SVR | Regression |
 
 ---
 
 # Model
 
-## Linear SVM
+## Linear SVM Decision Function
 
-The decision function is
+The linear decision function is
 
+```
 f(x) = wᵀx + b
+```
 
 Prediction
 
+```
 y = sign(wᵀx + b)
+```
 
 Where
 
@@ -39,151 +46,281 @@ Where
 |------|------|
 | w | weight vector |
 | b | bias |
-| x | feature vector |
+| x | input feature vector |
+
+The decision boundary is
+
+```
+wᵀx + b = 0
+```
 
 ---
 
-## Dual Representation
+## Margin Geometry
 
-Instead of directly solving for **w**, SVM solves a **dual optimization problem**.
+Two margin boundaries exist
 
-w = Σ αᵢ yᵢ xᵢ
+```
+wᵀx + b = 1
+wᵀx + b = -1
+```
 
-Where
+Margin width
 
-| Symbol | Meaning |
-|------|------|
-| αᵢ | Lagrange multiplier |
-| yᵢ | class label |
-| xᵢ | training sample |
+```
+Margin = 2 / ||w||
+```
 
-Only samples with **αᵢ > 0** contribute to the solution → these are the **support vectors**.
-
----
-
-## Kernel SVM
-
-Kernel functions allow SVM to learn **non-linear decision boundaries**.
-
-Decision function
-
-f(x) = Σ αᵢ yᵢ K(xᵢ , x) + b
-
-Where
-
-| Symbol | Meaning |
-|------|------|
-| K(xᵢ , x) | kernel function |
-
-Common kernels
-
-• Linear  
-• Polynomial  
-• RBF (Gaussian)  
+Maximizing margin is equivalent to **minimizing ||w||²**.
 
 ---
 
 # Math Implementation
 
-## Primal Optimization Problem
+## Hard Margin SVM
 
-SVM solves
+If the data is perfectly separable:
 
-min (1/2) ||w||² + C Σ ξᵢ
+Optimization objective
 
-subject to
+```
+min (1/2) ||w||²
+```
 
-yᵢ (w·xᵢ + b) ≥ 1 − ξᵢ
+Subject to
+
+```
+yᵢ (w·xᵢ + b) ≥ 1
+```
+
+This ensures all points are correctly classified.
+
+---
+
+## Soft Margin SVM
+
+Real data is rarely perfectly separable.
+
+Introduce **slack variables**
+
+```
+ξᵢ ≥ 0
+```
+
+Optimization becomes
+
+```
+min (1/2)||w||² + C Σ ξᵢ
+```
+
+Subject to
+
+```
+yᵢ(w·xᵢ + b) ≥ 1 − ξᵢ
+```
 
 Where
 
 | Symbol | Meaning |
 |------|------|
-| ξᵢ | slack variable |
 | C | regularization parameter |
+| ξᵢ | classification error |
 
-The first term maximizes the **margin**, while the second penalizes classification errors.
+Large C → less tolerance to errors  
+Small C → wider margin but more errors
 
 ---
 
-## Dual Optimization Problem
+# Dual Formulation
 
-The dual objective is
+Instead of solving for **w**, SVM solves the **dual optimization problem**.
 
-max Σ αᵢ − (1/2) Σ Σ αᵢ αⱼ yᵢ yⱼ xᵢ·xⱼ
+Introduce Lagrange multipliers:
 
-subject to
+```
+αᵢ ≥ 0
+```
 
-0 ≤ αᵢ ≤ C  
+Dual objective
+
+```
+max Σ αᵢ − ½ Σ Σ αᵢ αⱼ yᵢ yⱼ xᵢ·xⱼ
+```
+
+Subject to
+
+```
+0 ≤ αᵢ ≤ C
 Σ αᵢ yᵢ = 0
+```
 
 ---
 
-## Dual Matrix Form
+## Weight Vector from Dual
+
+After solving α:
+
+```
+w = Σ αᵢ yᵢ xᵢ
+```
+
+Only points with
+
+```
+αᵢ > 0
+```
+
+contribute to w.
+
+These points are the **support vectors**.
+
+---
+
+# Kernel Trick
+
+For nonlinear data we map inputs to higher dimensional space
+
+```
+φ(x)
+```
+
+Instead of computing φ explicitly we use
+
+```
+K(xᵢ,xⱼ) = φ(xᵢ)ᵀ φ(xⱼ)
+```
+
+This is called the **kernel trick**.
+
+Decision function becomes
+
+```
+f(x) = Σ αᵢ yᵢ K(xᵢ , x) + b
+```
+
+---
+
+# Common Kernels
+
+| Kernel | Formula |
+|------|------|
+Linear | xᵀz |
+Polynomial | (xᵀz + c)^d |
+RBF | exp(-γ||x−z||²) |
+Sigmoid | tanh(γxᵀz + c) |
+
+---
+
+# SVC (Support Vector Classification)
+
+SVC performs **binary classification**.
+
+Prediction
+
+```
+y = sign(wᵀx + b)
+```
+
+Loss used:
+
+**Hinge Loss**
+
+```
+L = max(0, 1 − y f(x))
+```
+
+Optimization minimizes
+
+```
+½ ||w||² + C Σ hinge_loss
+```
+
+---
+
+# Kernel SVC
+
+Kernel SVC extends SVC to nonlinear boundaries.
+
+Instead of
+
+```
+xᵢ · xⱼ
+```
+
+use
+
+```
+K(xᵢ , xⱼ)
+```
+
+Decision function
+
+```
+f(x) = Σ αᵢ yᵢ K(xᵢ , x) + b
+```
+
+Kernel SVC allows SVM to learn **complex nonlinear boundaries**.
+
+---
+
+# SVR (Support Vector Regression)
+
+SVR adapts SVM for **regression problems**.
+
+Instead of classification margin, SVR uses an **epsilon-insensitive region**.
+
+Errors inside this region are ignored.
+
+```
+|y − f(x)| ≤ ε
+```
+
+---
+
+## SVR Optimization
+
+Primal objective
+
+```
+min (1/2)||w||² + C Σ (ξᵢ + ξᵢ*)
+```
+
+Subject to
+
+```
+yᵢ − (w·xᵢ + b) ≤ ε + ξᵢ
+(w·xᵢ + b) − yᵢ ≤ ε + ξᵢ*
+```
+
+Where
+
+| Symbol | Meaning |
+|------|------|
+| ε | tolerance margin |
+| ξᵢ , ξᵢ* | slack variables |
+
+---
+
+## SVR Dual Variables
+
+Two Lagrange multipliers exist
+
+```
+αᵢ
+αᵢ*
+```
 
 Define
 
-Q = (y yᵀ) ⊙ (X Xᵀ)
-
-Where
-
-| Symbol | Meaning |
-|------|------|
-| ⊙ | element-wise multiplication |
-
-The dual objective becomes
-
-max 1ᵀα − (1/2) αᵀ Q α
-
----
-
-## Gradient of Dual Objective
-
-∇L = 1 − Qα
-
-This gradient is used in **gradient ascent**.
-
----
-
-## Gradient Ascent Update
-
-α = α + η (1 − Qα)
-
----
-
-## Constraint Enforcement
-
-After updating α, two constraints must be satisfied.
-
-### Box Constraint
-
-0 ≤ α ≤ C
-
-Implemented with
-
 ```
-clip(alpha, 0, C)
+β = α − α*
 ```
 
----
+Prediction becomes
 
-### Equality Constraint
-
-yᵀα = 0
-
-To enforce this constraint the projection step is used
-
-α ← α − proj_y(α)
-
-Projection formula
-
-proj_y(α) = (yᵀα / yᵀy) y
-
-Thus
-
-α = α − (yᵀα)/(yᵀy) y
-
-This removes the component of α parallel to y.
+```
+f(x) = Σ βᵢ K(xᵢ , x) + b
+```
 
 ---
 
@@ -193,157 +330,128 @@ This removes the component of α parallel to y.
 
 | Variable | Meaning |
 |------|------|
-| epoch | number of training iterations |
+| epoch | training iterations |
 | lr | learning rate |
-| C | regularization parameter |
+| C | regularization strength |
 | epsilon | SVR margin width |
 | Kernel | kernel function |
 
 ---
 
-### Derived During Training
+### Derived
 
 | Variable | Meaning |
 |------|------|
 | alpha | Lagrange multipliers |
-| alpha_star | dual variables in SVR |
-| Q | dual matrix |
+| alpha_star | SVR dual variables |
+| beta | α − α* |
 | w | weight vector |
 | b | bias |
 | support | support vector indices |
-| beta | α − α* (SVR dual variable) |
+| Q | dual matrix |
 
 ---
 
-# Loop / Vectorized Form
+# Vectorized Form
 
-Dual matrix computation
+Dual matrix
 
 ```
-Y = y @ y.T
-K = X @ X.T
-Q = Y * K
+Y = y yᵀ
+K = X Xᵀ
+Q = Y ⊙ K
 ```
 
 Gradient
 
 ```
-gradient = ones - Q @ alpha
+gradient = 1 − Qα
 ```
 
-Gradient ascent update
+Update
 
 ```
-alpha = alpha + lr * gradient
+α = α + lr * gradient
 ```
 
-Constraint enforcement
+Constraint
 
 ```
-alpha = clip(alpha,0,C)
-alpha = alpha - (y.T @ alpha)/(y.T @ y) * y
+α = clip(α,0,C)
+```
+
+Projection
+
+```
+α = α − (yᵀα)/(yᵀy) y
 ```
 
 ---
 
 # Algorithm Steps
 
-## SVC Training
+## SVC
 
 1 Initialize α = 0  
-
-2 Compute dual matrix  
-
-Q = (y yᵀ) ⊙ (X Xᵀ)
-
-3 Repeat for each iteration
-
-Compute gradient
-
-gradient = 1 − Qα
-
-Update α
-
-α = α + η gradient
-
-Clip α to satisfy
-
-0 ≤ α ≤ C
-
-Project α to satisfy
-
-yᵀα = 0
-
-4 Compute weight vector
-
-w = Xᵀ(α ⊙ y)
-
-5 Identify support vectors
-
-αᵢ > 0
-
-6 Compute bias
-
-b = mean(yᵢ − wᵀxᵢ)
+2 Compute dual matrix Q  
+3 Perform gradient ascent updates  
+4 Enforce constraints  
+5 Compute weight vector  
+6 Compute bias  
+7 Predict using sign(wᵀx+b)
 
 ---
 
-## Kernel SVC Training
+## Kernel SVC
 
-Same procedure as SVC, but replace
-
-X Xᵀ
-
-with kernel matrix
-
-K(X,X)
-
-Prediction uses
-
-f(x) = Σ αᵢ yᵢ K(xᵢ , x) + b
+1 Compute kernel matrix  
+2 Solve dual optimization  
+3 Identify support vectors  
+4 Predict using kernel decision function
 
 ---
 
-## SVR Training
+## Kernel SVR
 
-SVR uses **epsilon-insensitive loss**.
+1 Initialize α and α*  
+2 Compute kernel matrix  
+3 Update dual variables  
+4 Enforce constraints  
+5 Compute β = α − α*  
+6 Compute bias  
+7 Predict using regression function
 
-Errors smaller than ε are ignored
+---
 
-|y − f(x)| ≤ ε
+# Differences
 
-Two dual variables are introduced
-
-α and α*
-
-Define
-
-β = α − α*
-
-Prediction
-
-f(x) = Σ βᵢ K(xᵢ , x) + b
-
-The algorithm updates α and α* with gradient ascent while enforcing
-
-0 ≤ α, α* ≤ C  
-Σ (α − α*) = 0
+| Model | Task | Kernel Support | Loss |
+|------|------|------|------|
+SVC | Classification | Optional | Hinge Loss |
+Kernel SVC | Classification | Yes | Hinge Loss |
+Kernel SVR | Regression | Yes | Epsilon-insensitive loss |
 
 ---
 
 # Time Complexity
 
-Kernel matrix computation
+Kernel matrix
 
-O(n² d)
+```
+O(n²d)
+```
 
-Training complexity
+Training
 
+```
 O(epoch × n²)
+```
 
-Prediction complexity
+Prediction
 
+```
 O(n_support × d)
+```
 
 Where
 
